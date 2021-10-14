@@ -394,7 +394,10 @@ r4process $(echo "$json_value_origin" | tr -d ' ') root $tmp $flg_direct
 if [ -n "$flg_direct" ]; then
     cat ${tmp}targets | sort |
     while read line; do
-        if [ -z "$(cat ${tmp}answered_targets | grep $line)" ]; then
+        if [ ! -f ${tmp}answered_targets ]; then
+            echo "$line is not found."
+            exit 1
+        elif ! cat ${tmp}answered_targets | grep -sq $line ; then
             echo "$line is not found."
             exit 1
         fi
