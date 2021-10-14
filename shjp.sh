@@ -22,7 +22,7 @@
 
 #!/bin/bash
 
-if [ $# -le 1 ]; then
+if [ $# -eq 0 ]; then
     echo "Arguments lack."
     exit 1
 fi
@@ -48,6 +48,7 @@ else
 fi
 
 touch ${tmp}answer
+[ -f ${tmp}targets ] && flg_direct=1 || :
 
 function end(){
     rm -rdf ${tmp}
@@ -62,11 +63,26 @@ function invalidFormatError(){
 }
 
 function record(){
-    if [ -n "$flg_target" ]; then
-        echo $key >> ${tmp}answer
-        echo $1 >> ${tmp}answer
-        flg_target=''
+    if [ -n "$flg_direct" ]; then
+        if [ -n "$flg_target" ]; then
+            echo $key >> ${tmp}answer
+            echo $1 >> ${tmp}answer
+        else : 
+        fi
+    else
+        if [ "$flg_on_read" = 1 -o "$flg_on_read" = 2 ]; then
+            key_prefix=1
+        elif [ "$flg_on_read" = 3 ]; then
+            key_prefix=3
+        elif [ "$flg_on_read" = 4 ]; then
+            key_prefix=2
+        fi
+        echo ${key_prefix}${key} >> ${tmp}answer
+        echo "$1" | awk '{print "4" $0}' >> ${tmp}answer
+        [ "$key_prefix" = 2 -o "$key_prefix" = 3 ] && echo ${key_prefix}${key} >> ${tmp}answer || :
     fi
+    flg_on_read=''
+    flg_target=''
     key=''
 }
 
@@ -82,43 +98,27 @@ function readNumValue(){
         [[ "$char" =~ ^[0-9]+$ ]] || invalidFormatError || :
         last_idx=$(($i-$marked_idx+1))
     else
-        [[ "$char" =~ ^[0-9]+$ ]] && continue || forceCommma
+        [[ "$char" =~ ^[0-9]+$ ]] && return 0 || forceCommma
         last_idx=$(($i-$marked_idx))
         flg_state=''
         flg_on_read=''
     fi
 
     num_value=${json_value:(($marked_idx-1)):$last_idx}
-    record $num_value
+    [ -n "$1" ] && echo $num_value || record $num_value
 }
 
-function r4process(){
-    
-    json_value=$1
-    layer=$2
-    tmp=$3
+function processAarray(){
 
-    char_start=${json_value:0:1}
-    char_end=${json_value: -1}
-    
-    if [ "$char_start" = '{' ]; then
-        [ "$char_end" != '}' ] && invalidFormatError || :
-    elif [ "$char_start" = '[' ]; then
-        [ "$char_end" = ']' ] && return 0 || invalidFormatError
-    fi
-
-    json_value=${json_value:1:((${#json_value}-2))}
-    [ -z $json_value ] && return 0 || :
-
-    flg_force=1 # 1-dbq/2-comma/3-colon
-    flg_state=1 # 1-extract key/2-distinguish value/3-extract value
-    flg_on_read='' # 1-str/2-num/3-obj or array
+    flg_force='' # 1-dbq/2-comma
+    flg_state=1 # 1-distinguish value/2-extract value
+    flg_on_read='' # 1-str/2-num/3-array or obj
     flg_target=''
     flg_end=''
     marked_idx=0
     key=''
 
-    flg_read3_escaped=''
+    flg_escape4reading=''
     depth_counter=''
 
     for i in `seq 1 ${#json_value}`; do
@@ -126,7 +126,10 @@ function r4process(){
         char=${json_value:(($i-1)):1}
         [ "$i" = "${#json_value}" ] && flg_end=1 || :
 
-        if [ -n "$flg_force" ]; then
+        if [ -z "$flg_on_read" -a "a$char" = "a " ]; then
+            continue
+
+        elif [ -n "$flg_force" ]; then
 
             if [ "$flg_force" = 1 ]; then
                 [ "$char" != '"' ] && invalidFormatError || :
@@ -135,21 +138,17 @@ function r4process(){
                 marked_idx=$i
             elif [ "$flg_force" = 2 ]; then
                 forceCommma
-            elif [ "$flg_force" = '3' ]; then
-                [ "$char" != ':' ] && invalidFormatError || :
-                flg_force=''
-                flg_state=2
             fi
         
-        elif [ "$flg_state" = 2 ]; then
+        elif [ "$flg_state" = 1 ]; then
             
             marked_idx=$i
-            flg_state=3
+            flg_state=2
             
             if [ "$char" = '"' ]; then
                 flg_on_read=1
             elif [[ "$char" =~ ^[0-9]+$ ]]; then
-                readNumValue
+                readNumValue 1
                 flg_on_read=2
             elif [ "$char" = '{' ]; then
                 flg_on_read=3
@@ -167,32 +166,24 @@ function r4process(){
             flg_on_read=''
             str_value=${json_value:$marked_idx:(($i-$marked_idx-1))}
 
-            if [ "$flg_state" = 1 ]; then
-                flg_force=3
-                [ "$layer" = 'root' ] && key=$str_value || key=${layer}.${str_value}
-                [ -n "$(cat ${tmp}targets | awk '$0=="'$key'"')" ] && flg_target=1 || :
-            elif [ "$flg_state" = 3 ]; then
-                flg_force=2
-                flg_state=''
-                record $str_value
-            elif [ -n "$flg_end" ]; then
-                record $str_value
-            fi
-
+            flg_force=2
+            flg_state=''
+            echo $str_value
+            
         elif [ "$flg_on_read" = 2 ]; then
             
-            readNumValue
+            readNumValue 1
 
         elif [ "$flg_on_read" = 3 ]; then
 
             if [ "$char" = '"' ]; then
-                if [ -z "$flg_read3_escaped" ]; then
-                    flg_read3_escaped=1
+                if [ -z "$flg_escape4reading" ]; then
+                    flg_escape4reading=1
                 elif [ "${json_value:(($i-2)):1}" != '\' ]; then
-                    flg_read3_escaped=''
+                    flg_escape4reading=''
                 fi
                 continue
-            elif [ -n "$flg_read3_escaped" ]; then
+            elif [ -n "$flg_escape4reading" ]; then
                 continue 
             fi
 
@@ -219,36 +210,201 @@ function r4process(){
             flg_on_read=''
             obj_value=${json_value:(($marked_idx-1)):(($i-$marked_idx+1))}
 
-            if [ -n "$(cat ${tmp}targets | awk '$0 ~ /^('$key').+$/')" ]; then
-                # 再帰時の変数住み分けのため子プロセスで実行
-                output=$(r4process "$obj_value" "$key" $tmp)
+            if [ "$flg_state" = 3 ]; then
+                flg_force=2
+                flg_state=''
+            fi
+
+            # 配列内の配列及びオブジェクトのパースは
+            # 呼び出し元でのループ処理における随時的なjsonパースを想定しているため、考慮しない
+            echo $obj_value
+        fi
+    done
+    [ -z "$flg_end" ] && invalidFormatError || :
+}
+
+function r4process(){
+    
+    json_value=$1
+    layer=$2
+    tmp=$3
+    flg_direct=$4
+
+    char_start=${json_value:0:1}
+    char_end=${json_value: -1}
+    json_value=${json_value:1:((${#json_value}-2))}
+
+    if [ "$char_start" = '{' ]; then
+        [ "$char_end" != '}' ] && invalidFormatError || :
+    elif [ "$char_start" = '[' ]; then
+        [ "$char_end" = ']' ] && flg_array=1 || invalidFormatError
+    fi
+
+    [ -z "$json_value" ] && return 0 || :
+    if [ -n "$flg_array" ]; then
+        processAarray
+        if [ $? -ne 0 ]; then
+            [ -n "$output" ] && echo "$output" || :
+            end 1
+        fi
+        return 0
+    fi
+
+    flg_force=1 # 1-dbq/2-comma/3-colon
+    flg_state=1 # 1-extract key/2-distinguish value/3-extract value
+    flg_on_read='' # 1-str/2-num/3-obj/4-array
+    flg_target='' # 1-this is the target./2-including the target as children.
+    flg_end=''
+    marked_idx=0
+    key=''
+
+    flg_escape4reading=''
+    depth_counter=''
+
+    for i in `seq 1 ${#json_value}`; do
+    
+        char=${json_value:(($i-1)):1}
+        [ "$i" = "${#json_value}" ] && flg_end=1 || :
+
+        if [ -z "$flg_on_read" -a "a$char" = "a " ]; then
+            continue
+        
+        elif [ -n "$flg_force" ]; then
+
+            if [ "$flg_force" = 1 ]; then
+                [ "$char" != '"' ] && invalidFormatError || :
+                flg_force=''
+                flg_on_read=1
+                marked_idx=$i
+            elif [ "$flg_force" = 2 ]; then
+                forceCommma
+            elif [ "$flg_force" = 3 ]; then
+                [ "$char" != ':' ] && invalidFormatError || :
+                flg_force=''
+                flg_state=2
+            fi
+        
+        elif [ "$flg_state" = 2 ]; then
+            
+            marked_idx=$i
+            flg_state=3
+            
+            if [ "$char" = '"' ]; then
+                flg_on_read=1
+            elif [[ "$char" =~ ^[0-9]+$ ]]; then
+                readNumValue
+                flg_on_read=2
+            elif [ "$char" = '{' ]; then
+                flg_on_read=3
+                depth_counter='{'
+            elif [ "$char" = '['  ]; then
+                flg_on_read=4
+                depth_counter='['
+            else
+                invalidFormatError
+            fi
+
+        elif [ "$flg_on_read" = 1 ]; then
+            [ "$char" != '"' -o "${json_value:(($i-2)):1}" = '\' ] && continue || :
+
+            str_value=${json_value:$marked_idx:(($i-$marked_idx-1))}
+
+            if [ "$flg_state" = 1 ]; then
+                flg_force=3
+                flg_on_read=''
+                [ "$layer" = 'root' ] && key=$str_value || key=${layer}.${str_value}
+                if [ -n "$flg_direct" ]; then
+                    flg_target="$(cat ${tmp}targets | 
+                        awk '{
+                            if(end){
+                            }else if($0=="'$key'"){
+                                print "1";
+                                end=1
+                            }else if($0 ~ /^('$key').+$/)){
+                                print "2";
+                                end=1;
+                            }}')"
+                fi
+            elif [ "$flg_state" = 3 ]; then
+                flg_force=2
+                flg_state=''
+                record "$str_value"
+            fi
+
+        elif [ "$flg_on_read" = 2 ]; then
+            
+            readNumValue
+
+        elif [ "$flg_on_read" = 3 -o "$flg_on_read" = 4 ]; then
+
+            if [ "$char" = '"' ]; then
+                if [ -z "$flg_escape4reading" ]; then
+                    flg_escape4reading=1
+                elif [ "${json_value:(($i-2)):1}" != '\' ]; then
+                    flg_escape4reading=''
+                fi
+                continue
+            elif [ -n "$flg_escape4reading" ]; then
+                continue 
+            fi
+
+            if [ "$char" = '{' ]; then
+                depth_counter=$depth_counter'{'
+            elif [ "$char" = '['  ]; then
+                depth_counter=$depth_counter'['
+            elif [ "$char" = '}'  ]; then
+                if [ "${depth_counter: -1}" = '{' ]; then
+                    depth_counter=${depth_counter:0:((${#depth_counter}-1))}
+                else 
+                    invalidFormatError
+                fi
+            elif [ "$char" = ']'  ]; then
+                if [ "${depth_counter: -1}" = '[' ]; then
+                    depth_counter=${depth_counter:0:((${#depth_counter}-1))}
+                else 
+                    invalidFormatError
+                fi
+            fi
+
+            [ -n "$depth_counter" ] && continue || :
+            
+            obj_value=${json_value:(($marked_idx-1)):(($i-$marked_idx+1))}
+
+            if [ -z "$flg_direct" -o \
+                 "$flg_on_read" = 3 -a "$flg_target" = 2 -o \
+                 "$flg_on_read" = 4 -a "$flg_target" = 1 ]; then
+                output=$(r4process "$obj_value" "$key" $tmp $flg_direct)
                 if [ $? -ne 0 ]; then
                     [ -n "$output" ] && echo "$output" || :
                     end 1
                 fi
+                [ "$flg_on_read" = 3 -o "$flg_on_read" = 4 ] && obj_value="$output" || :
             fi
 
             if [ "$flg_state" = 3 ]; then
                 flg_force=2
                 flg_state=''
             fi
-            record $obj_value
+
+            record "$obj_value"
         fi
     done
     [ -z "$flg_end" ] && invalidFormatError || :
 }
 
-r4process $(echo "$json_value_origin" | tr -d ' ') root $tmp
+r4process $(echo "$json_value_origin" | tr -d ' ') root $tmp $flg_direct
 
-cat ${tmp}answer | awk 'NR%2==1' | sort > ${tmp}answered_targets
-cat ${tmp}targets | sort |
-while read line; do
-    if [ -z "$(cat ${tmp}answered_targets | grep $line)" ]; then
-        echo "$line is not found."
-        exit 1
-    fi
-done
-[ $? -ne 0 ] && end 1 || :
+if [ -n "$flg_direct" ]; then
+    cat ${tmp}answer | awk 'NR%2==1' | sort > ${tmp}answered_targets
+    cat ${tmp}targets | sort |
+    while read line; do
+        if [ -z "$(cat ${tmp}answered_targets | grep $line)" ]; then
+            echo "$line is not found."
+            exit 1
+        fi
+    done
+    [ $? -ne 0 ] && end 1 || :
+fi
 
 cat ${tmp}answer
 
