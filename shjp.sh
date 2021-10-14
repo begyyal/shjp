@@ -389,7 +389,7 @@ function r4process(){
     [ -z "$flg_end" ] && invalidFormatError || :
 }
 
-r4process $(echo "$json_value_origin" | tr -d ' ') root $tmp $flg_direct
+r4process "$json_value_origin" root $tmp $flg_direct
 
 if [ -n "$flg_direct" ]; then
     cat ${tmp}targets | sort |
