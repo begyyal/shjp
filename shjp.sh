@@ -177,7 +177,7 @@ function processAarray(){
 
             flg_force=2
             flg_state=''
-            echo $str_value
+            echo "$str_value"
             
         elif [ "$flg_on_read" = 2 ]; then
             
@@ -219,14 +219,14 @@ function processAarray(){
             flg_on_read=''
             obj_value=${json_value:(($marked_idx-1)):(($i-$marked_idx+1))}
 
-            if [ "$flg_state" = 3 ]; then
+            if [ "$flg_state" = 2 ]; then
                 flg_force=2
                 flg_state=''
             fi
 
             # 配列内の配列及びオブジェクトのパースは
             # 呼び出し元でのループ処理における随時的なjsonパースを想定しているため、考慮しない
-            echo $obj_value
+            echo "$obj_value"
         fi
     done
     [ -z "$flg_end" ] && invalidFormatError || :
@@ -252,10 +252,6 @@ function r4process(){
     [ -z "$json_value" ] && return 0 || :
     if [ -n "$flg_array" ]; then
         processAarray
-        if [ $? -ne 0 ]; then
-            [ -n "$output" ] && echo "$output" || :
-            end 1
-        fi
         return 0
     fi
 
