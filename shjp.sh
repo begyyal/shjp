@@ -66,8 +66,8 @@ function record(){
 
     if [ -n "$flg_direct" ]; then
         if [ "$flg_target" = 1 ]; then
-            echo $key >> ${tmp}answer
-            echo $1 >> ${tmp}answer
+            echo $key >> ${tmp}answered_targets
+            echo "$1" >> ${tmp}answer
         else : 
         fi
     else
@@ -339,8 +339,8 @@ function r4process(){
                             if(end){
                             }else if($0=="'$key'"){
                                 print "1";
-                                end=1
-                            }else if($0 ~ /^('$key').+$/)){
+                                end=1;
+                            }else if($0 ~ /^('$key').+$/){
                                 print "2";
                                 end=1;
                             }}')"
@@ -392,7 +392,6 @@ function r4process(){
 r4process $(echo "$json_value_origin" | tr -d ' ') root $tmp $flg_direct
 
 if [ -n "$flg_direct" ]; then
-    cat ${tmp}answer | awk 'NR%2==1' | sort > ${tmp}answered_targets
     cat ${tmp}targets | sort |
     while read line; do
         if [ -z "$(cat ${tmp}answered_targets | grep $line)" ]; then
