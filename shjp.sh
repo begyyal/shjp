@@ -63,6 +63,7 @@ function invalidFormatError(){
 }
 
 function record(){
+
     if [ -n "$flg_direct" ]; then
         if [ "$flg_target" = 1 ]; then
             echo $key >> ${tmp}answer
@@ -113,6 +114,45 @@ function readNumValue(){
 
     num_value=${json_value:(($marked_idx-1)):$last_idx}
     [ -n "$1" ] && echo $num_value || record $num_value
+}
+
+function identifyClosingBracket(){
+
+    if [ "$char" = '"' ]; then
+        if [ -z "$flg_escape4reading" ]; then
+            flg_escape4reading=1
+        elif [ "${json_value:(($i-2)):1}" != '\' ]; then
+            flg_escape4reading=''
+        fi
+        flg_continue=1
+        return 0
+    elif [ -n "$flg_escape4reading" ]; then
+        flg_continue=1
+        return 0 
+    fi
+
+    if [ "$char" = '{' ]; then
+        depth_counter=$depth_counter'{'
+    elif [ "$char" = '['  ]; then
+        depth_counter=$depth_counter'['
+    elif [ "$char" = '}'  ]; then
+        if [ "${depth_counter: -1}" = '{' ]; then
+            depth_counter=${depth_counter:0:((${#depth_counter}-1))}
+        else 
+            invalidFormatError
+        fi
+    elif [ "$char" = ']'  ]; then
+        if [ "${depth_counter: -1}" = '[' ]; then
+            depth_counter=${depth_counter:0:((${#depth_counter}-1))}
+        else 
+            invalidFormatError
+        fi
+    fi
+
+    if [ -n "$depth_counter" ]; then
+        flg_continue=1
+        return 0
+    fi
 }
 
 function processAarray(){
@@ -185,36 +225,9 @@ function processAarray(){
 
         elif [ "$flg_on_read" = 3 ]; then
 
-            if [ "$char" = '"' ]; then
-                if [ -z "$flg_escape4reading" ]; then
-                    flg_escape4reading=1
-                elif [ "${json_value:(($i-2)):1}" != '\' ]; then
-                    flg_escape4reading=''
-                fi
-                continue
-            elif [ -n "$flg_escape4reading" ]; then
-                continue 
-            fi
-
-            if [ "$char" = '{' ]; then
-                depth_counter=$depth_counter'{'
-            elif [ "$char" = '['  ]; then
-                depth_counter=$depth_counter'['
-            elif [ "$char" = '}'  ]; then
-                if [ "${depth_counter: -1}" = '{' ]; then
-                    depth_counter=${depth_counter:0:((${#depth_counter}-1))}
-                else 
-                    invalidFormatError
-                fi
-            elif [ "$char" = ']'  ]; then
-                if [ "${depth_counter: -1}" = '[' ]; then
-                    depth_counter=${depth_counter:0:((${#depth_counter}-1))}
-                else 
-                    invalidFormatError
-                fi
-            fi
-
-            [ -n "$depth_counter" ] && continue || :
+            flg_continue=''
+            identifyClosingBracket
+            [ -n "$flg_continue" ] && continue || :
             
             flg_on_read=''
             obj_value=${json_value:(($marked_idx-1)):(($i-$marked_idx+1))}
@@ -344,36 +357,9 @@ function r4process(){
 
         elif [ "$flg_on_read" = 3 -o "$flg_on_read" = 4 ]; then
 
-            if [ "$char" = '"' ]; then
-                if [ -z "$flg_escape4reading" ]; then
-                    flg_escape4reading=1
-                elif [ "${json_value:(($i-2)):1}" != '\' ]; then
-                    flg_escape4reading=''
-                fi
-                continue
-            elif [ -n "$flg_escape4reading" ]; then
-                continue 
-            fi
-
-            if [ "$char" = '{' ]; then
-                depth_counter=$depth_counter'{'
-            elif [ "$char" = '['  ]; then
-                depth_counter=$depth_counter'['
-            elif [ "$char" = '}'  ]; then
-                if [ "${depth_counter: -1}" = '{' ]; then
-                    depth_counter=${depth_counter:0:((${#depth_counter}-1))}
-                else 
-                    invalidFormatError
-                fi
-            elif [ "$char" = ']'  ]; then
-                if [ "${depth_counter: -1}" = '[' ]; then
-                    depth_counter=${depth_counter:0:((${#depth_counter}-1))}
-                else 
-                    invalidFormatError
-                fi
-            fi
-
-            [ -n "$depth_counter" ] && continue || :
+            flg_continue=''
+            identifyClosingBracket
+            [ -n "$flg_continue" ] && continue || :
             
             obj_value=${json_value:(($marked_idx-1)):(($i-$marked_idx+1))}
 
