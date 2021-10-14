@@ -64,7 +64,7 @@ function invalidFormatError(){
 
 function record(){
     if [ -n "$flg_direct" ]; then
-        if [ -n "$flg_target" ]; then
+        if [ "$flg_target" = 1 ]; then
             echo $key >> ${tmp}answer
             echo $1 >> ${tmp}answer
         else : 
@@ -78,18 +78,20 @@ function record(){
             key_prefix=2
         fi
         echo ${key_prefix}${key} >> ${tmp}answer
-        echo "$1" | awk '{print "4" $0}' >> ${tmp}answer
+        if [ "$flg_on_read" = 3 ]; then
+            output=$(r4process "$obj_value" "$key" $tmp $flg_direct)
+            if [ $? -ne 0 ]; then
+                [ -n "$output" ] && echo "$output" || :
+                end 1
+            fi
+        else
+            echo "$1" | awk '{print "4" $0}' >> ${tmp}answer
+        fi
         [ "$key_prefix" = 2 -o "$key_prefix" = 3 ] && echo ${key_prefix}${key} >> ${tmp}answer || :
     fi
     flg_on_read=''
     flg_target=''
     key=''
-}
-
-function forceCommma(){
-    [ "$char" != ',' ] && invalidFormatError || :
-    flg_state=1
-    flg_force=1
 }
 
 function readNumValue(){
@@ -98,7 +100,12 @@ function readNumValue(){
         [[ "$char" =~ ^[0-9]+$ ]] || invalidFormatError || :
         last_idx=$(($i-$marked_idx+1))
     else
-        [[ "$char" =~ ^[0-9]+$ ]] && return 0 || forceCommma
+        if [[ "$char" =~ ^[0-9]+$ ]]; then
+            return 0
+        else
+            [ "$char" != ',' ] && invalidFormatError || :
+            [ -n "$1" ] flg_force=1 || :
+        fi
         last_idx=$(($i-$marked_idx))
         flg_state=''
         flg_on_read=''
@@ -126,7 +133,7 @@ function processAarray(){
         char=${json_value:(($i-1)):1}
         [ "$i" = "${#json_value}" ] && flg_end=1 || :
 
-        if [ -z "$flg_on_read" -a "a$char" = "a " ]; then
+        if [ "$flg_on_read" != 1 -a "a$char" = "a " ]; then
             continue
 
         elif [ -n "$flg_force" ]; then
@@ -137,7 +144,9 @@ function processAarray(){
                 flg_on_read=1
                 marked_idx=$i
             elif [ "$flg_force" = 2 ]; then
-                forceCommma
+                [ "$char" != ',' ] && invalidFormatError || :
+                flg_force=''
+                flg_state=1
             fi
         
         elif [ "$flg_state" = 1 ]; then
@@ -266,7 +275,7 @@ function r4process(){
         char=${json_value:(($i-1)):1}
         [ "$i" = "${#json_value}" ] && flg_end=1 || :
 
-        if [ -z "$flg_on_read" -a "a$char" = "a " ]; then
+        if [ "$flg_on_read" != 1 -a "a$char" = "a " ]; then
             continue
         
         elif [ -n "$flg_force" ]; then
@@ -277,7 +286,9 @@ function r4process(){
                 flg_on_read=1
                 marked_idx=$i
             elif [ "$flg_force" = 2 ]; then
-                forceCommma
+                [ "$char" != ',' ] && invalidFormatError || :
+                flg_state=1
+                flg_force=1
             elif [ "$flg_force" = 3 ]; then
                 [ "$char" != ':' ] && invalidFormatError || :
                 flg_force=''
@@ -370,7 +381,10 @@ function r4process(){
             
             obj_value=${json_value:(($marked_idx-1)):(($i-$marked_idx+1))}
 
-            if [ -z "$flg_direct" -o \
+            # コンパイル形式の配列
+            # 直指定で対象を子に持つオブジェクト
+            # 直指定の配列
+            if [ -z "$flg_direct" -a "$flg_on_read" = 4 -o \
                  "$flg_on_read" = 3 -a "$flg_target" = 2 -o \
                  "$flg_on_read" = 4 -a "$flg_target" = 1 ]; then
                 output=$(r4process "$obj_value" "$key" $tmp $flg_direct)
@@ -378,7 +392,7 @@ function r4process(){
                     [ -n "$output" ] && echo "$output" || :
                     end 1
                 fi
-                [ "$flg_on_read" = 3 -o "$flg_on_read" = 4 ] && obj_value="$output" || :
+                [ "$flg_on_read" = 4 ] && obj_value="$output" || :
             fi
 
             if [ "$flg_state" = 3 ]; then
@@ -386,6 +400,7 @@ function r4process(){
                 flg_state=''
             fi
 
+            # コンパイル形式のオブジェクトのみ、record内で再帰する
             record "$obj_value"
         fi
     done
