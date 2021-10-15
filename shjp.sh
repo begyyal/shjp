@@ -33,23 +33,6 @@ tmp_id=$(ls -l $tmp_dir | grep $timestamp | wc -l)
 tmp=${tmp_dir}${timestamp}'_'${tmp_id}'/'
 mkdir -p $tmp
 
-readonly input=$1
-shift
-
-while [ -n "$1" ]; do
-    echo $1 >> ${tmp}targets
-    shift
-done
-
-if [ -f $input ]; then
-    json_value_origin=$(cat $input | tr -d '\r' | tr -d '\n')
-else
-    json_value_origin=$input
-fi
-
-touch ${tmp}answer
-[ -f ${tmp}targets ] && flg_direct=1 || :
-
 function end(){
     rm -rdf ${tmp}
     exit $1
@@ -61,6 +44,99 @@ function invalidFormatError(){
     echo $json_value
     end 1
 }
+
+function extractValue(){
+
+    if [ ! -f ${tmp}targets ]; then
+        echo "Arguments lack."
+        end 1
+    elif [ ! -f $input ]; then
+        echo '-g option requires a file path as first argument.'
+        end 1
+    fi
+
+    cat ${tmp}targets |
+    while read target; do
+        cat $input |
+        awk '{
+            if(keySeq=="1"){
+                if($0 ~ /^4.*$/){
+                    print substr($0,2)
+                    exit 0
+                }else{
+                    exit 1
+                }
+            }else if(keySeq=="2"){
+                if($0 ~ /^4.*$/){
+                    print substr($0,2)
+                }else if($0 ~ /^2('$target').*$/){
+                    end=1
+                    exit 0
+                }else{
+                    end=1
+                    exit 1
+                }
+            }
+            if($0 ~ /^[1-3]('$target')$/){
+                keySeq=substr($0,1,1)
+                if(keySeq=="3")
+                    exit 2
+            }
+        }END{
+            if(!keySeq){
+                print "'$target'" > "'${tmp}missed_target'"
+                exit 3
+            }else if(keySeq=="2" && !end){
+                exit 1
+            }
+        }'      
+    done > ${tmp}answer
+    exit_code=$?
+    if [ $exit_code -eq 1 ]; then
+        echo "This compiled file has invalid format."
+        end 1
+    elif [ $exit_code -eq 2 ]; then
+        echo 'Json object is not applicable for a target.'
+        end 1
+    elif [ $exit_code -eq 3 ]; then
+        echo 'The target ['$(cat ${tmp}missed_target)'] is not found.'
+        end 1
+    fi
+
+    cat ${tmp}answer
+}
+
+
+declare -a argv=()
+while (( $# > 0 )); do
+    case $1 in
+        -*)
+            [[ "$1" =~ 'g' ]] && flg_get=1 || :
+            shift
+            ;;
+        *)
+            argv+=("$1")
+            shift
+            ;;
+    esac
+done
+
+readonly input="${argv[0]}"
+for i in `seq 1 $((${#argv[*]}-1))`; do
+    [ -n "${argv[$i]}" ] && echo ${argv[$i]} >> ${tmp}targets || :
+done
+
+if [ -n "$flg_get" ]; then
+    extractValue
+    end 0
+elif [ -f $input ]; then
+    json_value_origin=$(cat $input | tr -d '\r' | tr -d '\n')
+else
+    json_value_origin=$input
+fi
+
+touch ${tmp}answer
+[ -f ${tmp}targets ] && flg_direct=1 || :
 
 function record(){
 
