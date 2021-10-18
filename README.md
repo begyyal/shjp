@@ -43,3 +43,6 @@ Because it is supposed to be reused, please redirect the result to a file.
 2. Json key that you want to get value, If it is in a hierarchy, please connect with dots.
 3. Other arguments after that are the same as 2.
 
+## Premise
+
+- Currently, newline expression (`\r|\n`) in json value is not supported.
