@@ -412,13 +412,12 @@ function r4process(){
                 if [ -n "$flg_direct" ]; then
                     flg_target="$(cat ${tmp}targets | 
                         awk '{
-                            if(end){
-                            }else if($0=="'$key'"){
+                            if($0=="'$key'"){
                                 print "1";
-                                end=1;
+                                exit 0;
                             }else if($0 ~ /^('$key').+$/){
                                 print "2";
-                                end=1;
+                                exit 0;
                             }}')"
                 fi
             elif [ "$flg_state" = 3 ]; then
@@ -441,7 +440,7 @@ function r4process(){
 
             # コンパイル形式の配列
             # 直指定で対象を子に持つオブジェクト
-            # 直指定の配列
+            # 直指定で対象の配列
             if [ -z "$flg_direct" -a "$flg_on_read" = 4 -o \
                  "$flg_on_read" = 3 -a "$flg_target" = 2 -o \
                  "$flg_on_read" = 4 -a "$flg_target" = 1 ]; then
