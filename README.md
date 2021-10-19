@@ -6,6 +6,7 @@ This has only minumum functions, but you can just copy it and use it.
 ## Premise
 
 - MIT Lisense, description is in source file.
+- Compliant to Bash.
 
 ## Functions
 
