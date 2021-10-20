@@ -199,10 +199,10 @@ function record(){
 function readNumValue(){
     
     if [ -n "$flg_end" ]; then
-        [[ "$char" =~ ^[0-9]+$ ]] || invalidFormatError || :
+        [[ "$char" =~ ^[0-9]$ ]] || invalidFormatError || :
         last_idx=$(($i-$marked_idx+1))
 
-    elif [[ "$char" =~ ^[0-9]+$ ]]; then
+    elif [[ "$char" =~ ^[0-9]$ ]]; then
         return 0
 
     else
@@ -277,7 +277,7 @@ function processAarray(){
             
             if [ "$char" = '"' ]; then
                 flg_on_read=1
-            elif [[ "$char" =~ ^[0-9]+$ ]]; then
+            elif [[ "$char" =~ ^[0-9]$ ]]; then
                 readNumValue 1
                 flg_on_read=2
             elif [ "$char" = '{' ]; then
@@ -294,10 +294,14 @@ function processAarray(){
 
         elif [ "$flg_on_read" = 1 ]; then
 
+            str_idx+=$char
+            [[ "${json_value:$i:1}" =~ ^[0-9]$ ]] && continue || :
+            echo ${str_shelf[$str_idx]}
+            str_idx=''
+
             flg_on_read=''
             flg_force=2
             flg_state=''
-            echo ${str_shelf[$char]}
             
         elif [ "$flg_on_read" = 2 ]; then
             
@@ -306,11 +310,13 @@ function processAarray(){
         elif [ "$flg_on_read" = 3 ]; then
 
             if [ $char = '"' ]; then
-                next=1
+                str_idx=${json_value:$i:1}
                 continue
-            elif [ -n "$next" ]; then
-                obj_value+=${str_shelf[$char]}
-                next=''
+            elif [ -n "$str_idx" ]; then
+                [ ${#str_idx} != 1 ] && str_idx+=$char || :
+                [[ "${json_value:$i:1}" =~ ^[0-9]$ ]] && continue || :
+                obj_value+=${str_shelf[$str_idx]}
+                str_idx=''
                 continue
             else
                 obj_value+=$char
@@ -393,7 +399,7 @@ function r4process(){
             
             if [ "$char" = '"' ]; then
                 flg_on_read=1
-            elif [[ "$char" =~ ^[0-9]+$ ]]; then
+            elif [[ "$char" =~ ^[0-9]$ ]]; then
                 readNumValue
                 flg_on_read=2
             elif [ "$char" = '{' ]; then
@@ -410,7 +416,10 @@ function r4process(){
 
         elif [ "$flg_on_read" = 1 ]; then
 
-            str_value=${str_shelf[$char]}
+            str_idx+=$char
+            [[ "${json_value:$i:1}" =~ ^[0-9]$ ]] && continue || :
+            str_value=${str_shelf[$str_idx]}
+            str_idx=''
 
             if [ "$flg_state" = 1 ]; then
     
@@ -444,11 +453,13 @@ function r4process(){
                 "$flg_on_read" = 3 -a $(($flg_target&1)) != 0 ]; then
 
                 if [ "$char" = '"' ]; then
-                    next=1
+                    str_idx=${json_value:$i:1}
                     continue
-                elif [ -n "$next" ]; then
-                    obj_value+=${str_shelf[$char]}
-                    next=''
+                elif [ -n "$str_idx" ]; then
+                    [ ${#str_idx} != 1 ] && str_idx+=$char || :
+                    [[ "${json_value:$i:1}" =~ ^[0-9]$ ]] && continue || :
+                    obj_value+=${str_shelf[$str_idx]}
+                    str_idx=''
                     continue
                 else
                     obj_value+=$char
