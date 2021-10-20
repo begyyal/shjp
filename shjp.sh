@@ -23,7 +23,7 @@
 # SOFTWARE.
 
 if [ $# -eq 0 ]; then
-    echo "Arguments lack."
+    echo "Arguments lack." >&2
     exit 1
 fi
 
@@ -38,19 +38,13 @@ function end(){
     exit $1
 }
 
-function invalidFormatError(){
-    echo 'This json has invalid format.'
-    echo $json_value
-    end 1
-}
-
 function extractValue(){
 
     if [ ${#targets[@]} -eq 0 ]; then
-        echo "Arguments lack."
+        echo "Arguments lack." >&2
         end 1
     elif [ ! -f $input ]; then
-        echo '-g option requires a file path as first argument.'
+        echo '-g option requires a file path as first argument.' >&2
         end 1
     fi
 
@@ -91,13 +85,13 @@ function extractValue(){
     done > ${tmp}answer
     exit_code=$?
     if [ $exit_code -eq 1 ]; then
-        echo "This compiled file has invalid format."
+        echo "This compiled file has invalid format." >&2
         end 1
     elif [ $exit_code -eq 2 ]; then
-        echo 'Json object is not applicable for a target.'
+        echo 'Json object is not applicable for a target.' >&2
         end 1
     elif [ $exit_code -eq 3 ]; then
-        echo 'The target ['$(cat ${tmp}missed_target)'] is not found.'
+        echo 'The target ['$(cat ${tmp}missed_target)'] is not found.' >&2
         end 1
     fi
 
@@ -162,6 +156,21 @@ preProcess
 
 touch ${tmp}answer
 [ ${#targets[@]} -ne 0 ] && flg_direct=1 || :
+
+function printStacktrace() {
+    index=1
+    while frame=($(caller "${index}")); do
+        ((index++))
+        echo "at function ${frame[1]} (${frame[2]}:${frame[0]})" >&2
+    done
+}
+
+function invalidFormatError(){
+    echo 'This json has invalid format.' >&2
+    echo $json_value >&2
+    printStacktrace
+    end 1
+}
 
 function record(){
 
@@ -492,12 +501,12 @@ r4process "$pre_processed_jv" root $tmp $flg_direct
 
 if [ -n "$flg_direct" ]; then
     if [ ! -f ${tmp}answered_targets ]; then
-        echo "Specified targets is not found."
+        echo "Specified targets is not found." >&2
         end 1
     fi
     for target in ${targets[@]}; do
         if ! cat ${tmp}answered_targets | grep -sq "${target//\\/\\\\}" ; then
-            echo "$target is not found."
+            echo "$target is not found." >&2
             end 1
         fi
     done
