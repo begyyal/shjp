@@ -201,10 +201,8 @@ function readNumValue(){
     if [ -n "$flg_end" ]; then
         [[ "$char" =~ ^[0-9]$ ]] || invalidFormatError || :
         last_idx=$(($i-$marked_idx+1))
-
     elif [[ "$char" =~ ^[0-9]$ ]]; then
         return 0
-
     else
         [ "$char" != ',' ] && invalidFormatError || :
         [ -z "$1" ] && flg_force=1 || :
@@ -215,6 +213,25 @@ function readNumValue(){
 
     num_value=${json_value:(($marked_idx-1)):$last_idx}
     [ -n "$1" ] && echo $num_value || record $num_value
+}
+
+function restoreObjValue(){
+
+    if [ $char = '"' ]; then
+        str_idx=${json_value:$i:1}
+        flg_continue=1
+    elif [ -n "$str_idx" ]; then
+        [ ${#str_idx} != 1 ] && str_idx+=$char || :
+        if [[ "${json_value:$i:1}" =~ ^[0-9]$ ]]; then
+            flg_continue=1
+            return 0
+        fi
+        obj_value+=${str_shelf[$str_idx]}
+        str_idx=''
+        flg_continue=1
+    else
+        obj_value+=$char
+    fi
 }
 
 function identifyClosingBracket(){
@@ -237,10 +254,7 @@ function identifyClosingBracket(){
         fi
     fi
 
-    if [ -n "$depth_counter" ]; then
-        flg_continue=1
-        return 0
-    fi
+    [ -n "$depth_counter" ] && flg_continue=1 || :
 }
 
 function processAarray(){
@@ -309,20 +323,10 @@ function processAarray(){
 
         elif [ "$flg_on_read" = 3 ]; then
 
-            if [ $char = '"' ]; then
-                str_idx=${json_value:$i:1}
-                continue
-            elif [ -n "$str_idx" ]; then
-                [ ${#str_idx} != 1 ] && str_idx+=$char || :
-                [[ "${json_value:$i:1}" =~ ^[0-9]$ ]] && continue || :
-                obj_value+=${str_shelf[$str_idx]}
-                str_idx=''
-                continue
-            else
-                obj_value+=$char
-            fi
-
             flg_continue=''
+            restoreObjValue
+            [ -n "$flg_continue" ] && continue || :
+
             identifyClosingBracket
             [ -n "$flg_continue" ] && continue || :
             
@@ -449,24 +453,13 @@ function r4process(){
 
         elif [ "$flg_on_read" = 3 -o "$flg_on_read" = 4 ]; then
 
+            flg_continue=''
             if [ -z "$flg_direct" -a "$flg_on_read" = 3 -o \
                 "$flg_on_read" = 3 -a $(($flg_target&1)) != 0 ]; then
-
-                if [ "$char" = '"' ]; then
-                    str_idx=${json_value:$i:1}
-                    continue
-                elif [ -n "$str_idx" ]; then
-                    [ ${#str_idx} != 1 ] && str_idx+=$char || :
-                    [[ "${json_value:$i:1}" =~ ^[0-9]$ ]] && continue || :
-                    obj_value+=${str_shelf[$str_idx]}
-                    str_idx=''
-                    continue
-                else
-                    obj_value+=$char
-                fi
+                restoreObjValue
+                [ -n "$flg_continue" ] && continue || :
             fi
 
-            flg_continue=''
             identifyClosingBracket
             [ -n "$flg_continue" ] && continue || :
             
