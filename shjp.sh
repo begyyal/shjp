@@ -138,7 +138,7 @@ function preProcess(){
         char=${json_value:(($i-1)):1}
         if [ "$flg_on_read" = 1 ]; then
             [ "a$char" != 'a"' -o "a${json_value:(($i-2)):1}" = 'a\' ] && continue || :
-            str_shelf+=(${json_value:$marked_idx:(($i-$marked_idx-1))})
+            str_shelf+=("${json_value:$marked_idx:(($i-$marked_idx-1))}")
             flg_on_read=''
             pre_processed_jv+='"'$((nr_index++))
         elif [ "$char" = '"' ]; then
@@ -221,12 +221,12 @@ function restoreObjValue(){
         str_idx=${json_value:$i:1}
         flg_continue=1
     elif [ -n "$str_idx" ]; then
-        [ ${#str_idx} != 1 ] && str_idx+=$char || :
         if [[ "${json_value:$i:1}" =~ ^[0-9]$ ]]; then
+            str_idx+=${json_value:$i:1}
             flg_continue=1
             return 0
         fi
-        obj_value+=${str_shelf[$str_idx]}
+        obj_value+=\"${str_shelf[$str_idx]}\"
         str_idx=''
         flg_continue=1
     else
