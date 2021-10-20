@@ -39,7 +39,6 @@ function end(){
 }
 
 function invalidFormatError(){
-    # TODO 気が向いたら該当箇所表示する
     echo 'This json has invalid format.'
     echo $json_value
     end 1
@@ -284,9 +283,11 @@ function processAarray(){
             elif [ "$char" = '{' ]; then
                 flg_on_read=3
                 depth_counter='{'
+                obj_value='{'
             elif [ "$char" = '['  ]; then
                 flg_on_read=3
                 depth_counter='['
+                obj_value='['
             else
                 invalidFormatError
             fi
@@ -304,21 +305,29 @@ function processAarray(){
 
         elif [ "$flg_on_read" = 3 ]; then
 
+            if [ $char = '"' ]; then
+                next=1
+                continue
+            elif [ -n "$next" ]; then
+                obj_value+=${str_shelf[$char]}
+                next=''
+                continue
+            else
+                obj_value+=$char
+            fi
+
             flg_continue=''
             identifyClosingBracket
             [ -n "$flg_continue" ] && continue || :
             
             flg_on_read=''
-            obj_value=${json_value:(($marked_idx-1)):(($i-$marked_idx+1))}
-
             if [ "$flg_state" = 2 ]; then
                 flg_force=2
                 flg_state=''
             fi
 
-            # 配列内の配列及びオブジェクトのパースは
-            # 呼び出し元でのループ処理における随時的なjsonパースを想定しているため、考慮しない
             echo "$obj_value"
+            obj_value=''
         fi
     done
     [ -z "$flg_end" ] && invalidFormatError || :
@@ -390,9 +399,11 @@ function r4process(){
             elif [ "$char" = '{' ]; then
                 flg_on_read=3
                 depth_counter='{'
+                obj_value='{'
             elif [ "$char" = '['  ]; then
                 flg_on_read=4
                 depth_counter='['
+                obj_value='['
             else
                 invalidFormatError
             fi
@@ -429,23 +440,35 @@ function r4process(){
 
         elif [ "$flg_on_read" = 3 -o "$flg_on_read" = 4 ]; then
 
+            if [ -z "$flg_direct" -a "$flg_on_read" = 3 -o \
+                "$flg_on_read" = 3 -a $(($flg_target&1)) != 0 ]; then
+
+                if [ "$char" = '"' ]; then
+                    next=1
+                    continue
+                elif [ -n "$next" ]; then
+                    obj_value+=${str_shelf[$char]}
+                    next=''
+                    continue
+                else
+                    obj_value+=$char
+                fi
+            fi
+
             flg_continue=''
             identifyClosingBracket
             [ -n "$flg_continue" ] && continue || :
             
-            obj_value=${json_value:(($marked_idx-1)):(($i-$marked_idx+1))}
-
-            # コンパイル形式の配列
-            # 直指定で対象を子に持つオブジェクト
-            # 直指定で対象の配列
             if [ -z "$flg_direct" -a "$flg_on_read" = 4 -o \
                  "$flg_on_read" = 3 -a $(($flg_target&2)) != 0 -o \
                  "$flg_on_read" = 4 -a $(($flg_target&1)) != 0 ]; then
-                output=$(r4process "$obj_value" "$key" $tmp $flg_direct)
+
+                output=$(r4process "${json_value:(($marked_idx-1)):(($i-$marked_idx+1))}" "$key" $tmp $flg_direct)
                 if [ $? -ne 0 ]; then
                     [ -n "$output" ] && echo "$output" || :
                     end 1
                 fi
+                
                 [ "$flg_on_read" = 4 ] && obj_value="$output" || :
             fi
 
@@ -454,8 +477,8 @@ function r4process(){
                 flg_state=''
             fi
 
-            # コンパイル形式のオブジェクトのみ、record内で再帰する
             record "$obj_value"
+            obj_value=''
         fi
     done
     [ -z "$flg_end" ] && invalidFormatError || :
