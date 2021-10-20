@@ -208,8 +208,8 @@ function record(){
 
 function readNumValue(){
     
-    if [ -n "$flg_end" ]; then
-        [[ "$char" =~ ^[0-9]$ ]] || invalidFormatError || :
+    if [ -z "${json_value:$i:1}" ]; then
+        [[ "$char" =~ ^[0-9]$ ]] || invalidFormatError
         last_idx=$(($i-$marked_idx+1))
     elif [[ "$char" =~ ^[0-9]$ ]]; then
         return 0
@@ -276,7 +276,6 @@ function processAarray(){
     flg_force='' # 1-dbq/2-comma
     flg_state=1 # 1-distinguish value/2-extract value
     flg_on_read='' # 1-str/2-num/3-array or obj
-    flg_end=''
     marked_idx=0
     key=''
     depth_counter=''
@@ -284,7 +283,6 @@ function processAarray(){
     for i in `seq 1 ${#json_value}`; do
     
         char=${json_value:(($i-1)):1}
-        [ "$i" = "${#json_value}" ] && flg_end=1 || :
 
         if [ -n "$flg_force" ]; then
 
@@ -354,7 +352,6 @@ function processAarray(){
             obj_value=''
         fi
     done
-    [ -z "$flg_end" ] && invalidFormatError || :
 }
 
 function r4process(){
@@ -382,7 +379,6 @@ function r4process(){
     flg_state=1 # 1-extract key/2-distinguish value/3-extract value
     flg_on_read='' # 1-str/2-num/3-obj/4-array
     flg_target=0 # 1-this is the target./2-including the target as children./3-both.
-    flg_end=''
     marked_idx=0
     key=''
     depth_counter=''
@@ -390,7 +386,6 @@ function r4process(){
     for i in `seq 1 ${#json_value}`; do
     
         char=${json_value:(($i-1)):1}
-        [ "$i" = "${#json_value}" ] && flg_end=1 || :
 
         if [ -n "$flg_force" ]; then
 
@@ -500,10 +495,9 @@ function r4process(){
             obj_value=''
         fi
     done
-    [ -z "$flg_end" ] && invalidFormatError || :
 }
 
-r4process "$pre_processed_jv" root $tmp $flg_direct
+r4process "$pre_processed_jv" root
 
 if [ -n "$flg_direct" ]; then
     if [ ! -f ${tmp}answered_targets ]; then
