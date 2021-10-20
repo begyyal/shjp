@@ -22,10 +22,8 @@ For example, compile mode is effective when following cases.
 #### Command format
 `shjp.sh [1] [2]...`
 1. Json file path or json string.
-2. Json key that you want to get value, If it is in a hierarchy, please connect with dots(*).
+2. Json key that you want to get value, If it is in a hierarchy, please connect with dots(*1).
 3. Other arguments after that are the same as 2.
-
-(*)If key includes dot, please it is escaped with backslash.
 
 ***
 ### Compile
@@ -50,3 +48,8 @@ Because it is supposed to be reused, please redirect the result to a file.
 ## Attention
 
 - Currently, newline expression (`\r|\n`) in json value is not supported.
+- (*1) If key includes dot, please it is escaped with backslash.  
+    In this case, note that backslash is escape character when it isn't enclosed in quotation marks..
+  - ng -> `aaa\.bbb` 
+  - ok -> `'aaa\.bbb'`
+  - ok -> `aaa\\.bbb`

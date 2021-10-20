@@ -68,7 +68,7 @@ function extractValue(){
             }else if(keySeq=="2"){
                 if($0 ~ /^4.*$/){
                     print substr($0,2)
-                }else if($0 ~ /^2('${target//\\./\\\\.}').*$/){
+                }else if($0 ~ /^2('${target//\\/\\\\}').*$/){
                     end=1
                     exit 0
                 }else{
@@ -76,14 +76,14 @@ function extractValue(){
                     exit 1
                 }
             }
-            if($0 ~ /^[1-3]('${target//\\./\\\\.}')$/){
+            if($0 ~ /^[1-3]('${target//\\/\\\\}')$/){
                 keySeq=substr($0,1,1)
                 if(keySeq=="3")
                     exit 2
             }
         }END{
             if(!keySeq){
-                print "'${target//\\./\\\\.}'" > "'${tmp}missed_target'"
+                print "'${target//\\/\\\\}'" > "'${tmp}missed_target'"
                 exit 3
             }else if(keySeq=="2" && !end){
                 exit 1
@@ -469,8 +469,8 @@ if [ -n "$flg_direct" ]; then
         end 1
     fi
     for target in ${targets[@]}; do
-        if ! cat ${tmp}answered_targets | grep -sq "$target" ; then
-            echo "$line is not found."
+        if ! cat ${tmp}answered_targets | grep -sq "${target//\\/\\\\}" ; then
+            echo "$target is not found."
             end 1
         fi
     done
