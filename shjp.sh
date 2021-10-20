@@ -88,7 +88,8 @@ function extractValue(){
         echo "This compiled file has invalid format." >&2
         end 1
     elif [ $exit_code -eq 2 ]; then
-        echo 'Json object is not applicable for a target.' >&2
+        echo 'Object type can'\''t be applicable for a target in compile mode.' >&2
+        echo 'Please specify value of literal or array, or use function of the directly get.' >&2
         end 1
     elif [ $exit_code -eq 3 ]; then
         echo 'The target ['$(cat ${tmp}missed_target)'] is not found.' >&2
@@ -190,7 +191,7 @@ function record(){
         fi
         echo ${key_prefix}${key} >> ${tmp}answer
         if [ "$flg_on_read" = 3 ]; then
-            output=$(r4process "$obj_value" "$key" $tmp $flg_direct)
+            output=$(r4process "$1" "$key")
             if [ $? -ne 0 ]; then
                 [ -n "$output" ] && echo "$output" || :
                 end 1
@@ -216,12 +217,16 @@ function readNumValue(){
         [ "$char" != ',' ] && invalidFormatError || :
         [ -z "$1" ] && flg_force=1 || :
         flg_state=1
-        flg_on_read=''
         last_idx=$(($i-$marked_idx))
     fi
 
     num_value=${json_value:(($marked_idx-1)):$last_idx}
-    [ -n "$1" ] && echo $num_value || record $num_value
+    if [ -n "$1" ]; then
+        echo $num_value
+        flg_on_read=''
+    else
+        record $num_value
+    fi
 }
 
 function restoreObjValue(){
@@ -356,8 +361,6 @@ function r4process(){
 
     json_value=$1
     layer=$2
-    tmp=$3
-    flg_direct=$4
 
     char_start=${json_value:0:1}
     char_end=${json_value: -1}
@@ -463,8 +466,7 @@ function r4process(){
         elif [ "$flg_on_read" = 3 -o "$flg_on_read" = 4 ]; then
 
             flg_continue=''
-            if [ -z "$flg_direct" -a "$flg_on_read" = 3 -o \
-                "$flg_on_read" = 3 -a $(($flg_target&1)) != 0 ]; then
+            if [ "$flg_on_read" = 3 -a $(($flg_target&1)) != 0 ]; then
                 restoreObjValue
                 [ -n "$flg_continue" ] && continue || :
             fi
@@ -472,11 +474,15 @@ function r4process(){
             identifyClosingBracket
             [ -n "$flg_continue" ] && continue || :
             
-            if [ -z "$flg_direct" -a "$flg_on_read" = 4 -o \
+            indexed_obj_value="${json_value:(($marked_idx-1)):(($i-$marked_idx+1))}"
+            if [ -z "$flg_direct" -a "$flg_on_read" = 3 ]; then
+                obj_value="$indexed_obj_value"
+
+            elif [ -z "$flg_direct" -a "$flg_on_read" = 4 -o \
                  "$flg_on_read" = 3 -a $(($flg_target&2)) != 0 -o \
                  "$flg_on_read" = 4 -a $(($flg_target&1)) != 0 ]; then
 
-                output=$(r4process "${json_value:(($marked_idx-1)):(($i-$marked_idx+1))}" "$key" $tmp $flg_direct)
+                output=$(r4process "$indexed_obj_value" "$key")
                 if [ $? -ne 0 ]; then
                     [ -n "$output" ] && echo "$output" || :
                     end 1
