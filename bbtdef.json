@@ -6,33 +6,37 @@
 	"operations": [
 		{
 			"name": "test1",
-			"command": "java -jar hello.jar",
+			"command": "./shjp.sh ./test.json ne.mimimi",
 			"expected": [
 				{
 					"act": "console-output",
-					"value": "hello!"
-				},
-				{
-					"act": "file-output",
-					"value": "output/hello.txt"
+					"value": "22"
 				}
 			]
 		},
 		{
 			"name": "test2",
-			"command": "java -jar hello.jar -a",
+			"command": "./shjp.sh ./test.json ne\\\\.ed",
 			"expected": [
 				{
 					"act": "console-output",
-					"value": "received opt-a."
-				},
+					"value": [
+						"hello.jar",
+						"mimimi"
+					]
+				}
+			]
+		},
+		{
+			"name": "test3",
+			"command": [
+				"./shjp.sh ./test.json > comp",
+				"./shjp.sh -g ./comp ne.ed"
+			],
+			"expected": [
 				{
-					"act": "file-update",
-					"value": "hoge.txt"
-				},
-				{
-					"act": "file-delete",
-					"value": "fuga.txt"
+					"act": "console-output",
+					"value": "32"
 				}
 			]
 		}

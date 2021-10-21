@@ -1,0 +1,27 @@
+{
+  "ne": {
+    "hello.jar":12,
+    "mimimi":22,
+    "ed":32
+  },
+  "ne.ed": [
+    "hello.jar",
+    "mimimi"
+  ],
+  "asset": "cmdbbt/",  
+  "operations": 
+    {
+      "name": "test1",
+      "command": "java -jar hello.jar",
+      "expected": [
+        {
+          "act": "console-output",
+          "value": "hello!"
+        },
+        {
+          "act": "file-output",
+          "value": "output/hello.txt"
+        }
+      ]
+    }
+}
