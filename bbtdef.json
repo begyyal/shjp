@@ -1,0 +1,40 @@
+{
+	"need": [
+		"shjp.sh"
+	],
+	"asset": "resource/cmdbbt/",
+	"operations": [
+		{
+			"name": "test1",
+			"command": "java -jar hello.jar",
+			"expected": [
+				{
+					"act": "console-output",
+					"value": "hello!"
+				},
+				{
+					"act": "file-output",
+					"value": "output/hello.txt"
+				}
+			]
+		},
+		{
+			"name": "test2",
+			"command": "java -jar hello.jar -a",
+			"expected": [
+				{
+					"act": "console-output",
+					"value": "received opt-a."
+				},
+				{
+					"act": "file-update",
+					"value": "hoge.txt"
+				},
+				{
+					"act": "file-delete",
+					"value": "fuga.txt"
+				}
+			]
+		}
+	]
+}
