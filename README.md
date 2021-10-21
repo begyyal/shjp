@@ -1,7 +1,7 @@
 # Overview
 
 SHJP is json parser writed by shell script in one file.  
-This has only minumum functions, but you can just copy it and use it.
+This has only minumum functions, but you can just copy [./shjp.sh](./shjp.sh) and use it.
 
 ## Premise
 
