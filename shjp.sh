@@ -145,7 +145,7 @@ function preProcess(){
     done
 }
 
-if [ -f $input ]; then
+if [ -f "$input" ]; then
     json_value_origin="$(cat $input)"
 else
     json_value_origin="$input"

@@ -2,7 +2,7 @@
 	"need": [
 		"shjp.sh"
 	],
-	"asset": "resource/cmdbbt/",
+	"resource": "resource/cmdbbt/",
 	"operations": [
 		{
 			"name": "test1",
