@@ -27,7 +27,7 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-tmp_dir='/tmp/cmdbbt/'
+tmp_dir='/tmp/shjp/'
 timestamp=$(date +%Y%m%d%H%M%S)
 tmp_id=$(ls -l $tmp_dir | grep $timestamp | wc -l)
 tmp=${tmp_dir}${timestamp}'_'${tmp_id}'/'
