@@ -27,11 +27,29 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-tmp_dir='/tmp/shjp/'
-timestamp=$(date +%Y%m%d%H%M%S)
-tmp_id=$(ls -l $tmp_dir | grep $timestamp | wc -l)
-tmp=${tmp_dir}${timestamp}'_'${tmp_id}'/'
-mkdir -p $tmp
+function setupTmp(){
+    tmp_dir='/tmp/shjp/'
+    mkdir -p $tmp_dir
+    timestamp=$(date +%Y%m%d%H%M%S)
+    tmp_id=$(ls -l $tmp_dir | grep $timestamp | wc -l)
+    tmp=${tmp_dir}${timestamp}'_'${tmp_id}'/'
+    mkdir -p $tmp
+}
+
+function rmExpired(){
+    ts_sec=$(date +%s)
+    expired_sec=$(($ts_sec-60*60))
+    expired_date=$(date --date=@$expired_sec +%Y%m%d%H%M%S)
+    for d in `ls $tmp_dir`; do
+        d_date=${d:0:14}
+        if [[ $d_date =~ ^[0-9]+$ ]]; then
+            [ $d_date -lt $expired_date ] && rm -rdf ${tmp_dir}${d} || :
+        fi
+    done
+}
+
+setupTmp
+rmExpired
 
 function end(){
     rm -rdf ${tmp}
