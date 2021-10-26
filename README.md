@@ -47,7 +47,7 @@ Because it is supposed to be reused, please redirect the result to a file.
 ***
 ## Attention
 
-- Currently, newline expression (`\r|\n`) in json value is not supported.
+- Currently, newline expression (`\r|\n`) in a value of string is not supported.
 - (*1) If key includes dot, please it is escaped with backslash.  
     In this case, note that backslash is escape character when it isn't enclosed in quotation marks..
   - ng -> `aaa\.bbb` 
