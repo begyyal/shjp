@@ -22,8 +22,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-if [ $# -eq 0 ]; then
-    echo "Arguments lack." >&2
+if [ "$1" = -g ]; then
+    flg_get=1
+    shift
+    readonly input=$1
+    shift
+elif [ -p /dev/stdin ]; then
+    readonly input="$(cat)"
+else
+    readonly input=$1
+    shift
+fi
+
+if [ -z "$input" ]; then
+    echo "Input value is empty." >&2
     exit 1
 fi
 
@@ -116,14 +128,6 @@ function extractValue(){
 
     cat ${tmp}answer
 }
-
-if [ "$1" = -g ]; then
-    flg_get=1
-    shift
-fi
-
-readonly input=$1
-shift
 
 declare -a targets
 while [ -n "$1" ]; do

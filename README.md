@@ -21,8 +21,8 @@ For example, compile mode is effective when following cases.
 
 #### Command format
 `shjp.sh [1] [2]...`
-1. Json file path or json string.
-2. Json key that you want to get value, If it is in a hierarchy, please connect with dots(*1).
+1. Json file path or json value. If stdin is pipe, it is used instead of 1.
+2. Json key that you want to get value. If it is in a hierarchy, please connect with dots(*1).
 3. Other arguments after that are the same as 2.
 
 ***
@@ -33,7 +33,7 @@ Because it is supposed to be reused, please redirect the result to a file.
 
 #### Command format
 `shjp.sh [1]`
-1. Json file path or json string.
+1. Json file path or json value. If stdin is pipe, it is used instead of 1.
 
 ***
 ### Get value from the compilation result
@@ -41,7 +41,7 @@ Because it is supposed to be reused, please redirect the result to a file.
 #### Command format
 `shjp.sh -g [1] [2]...`
 1. File path of the compilation result.
-2. Json key that you want to get value, If it is in a hierarchy, please connect with dots.
+2. Json key that you want to get value. If it is in a hierarchy, please connect with dots.
 3. Other arguments after that are the same as 2.
 
 ***
