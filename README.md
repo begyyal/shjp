@@ -40,7 +40,7 @@ Because it is supposed to be reused, please redirect the result to a file.
 
 #### Command format
 `shjp.sh -g [1] [2]...`
-1. File path of the compilation result.
+1. File path of the compilation result. If stdin is pipe, it is used instead of 1.
 2. Json key that you want to get value. If it is in a hierarchy, please connect with dots.
 3. Other arguments after that are the same as 2.
 

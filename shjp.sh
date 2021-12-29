@@ -25,12 +25,15 @@
 if [ "$1" = -g ]; then
     flg_get=1
     shift
-    readonly input=$1
-    shift
-elif [ -p /dev/stdin ]; then
-    readonly input="$(cat)"
+fi
+if [ -p /dev/stdin ]; then
+    input="$(cat)"
+    if [ -z "$input" ]; then
+        input=$1
+        shift
+    fi
 else
-    readonly input=$1
+    input=$1
     shift
 fi
 
