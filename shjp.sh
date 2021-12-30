@@ -42,13 +42,23 @@ if [ -z "$input" ]; then
     exit 1
 fi
 
+function generateTmpPath(){
+    tmp_id="-1"
+    for id in $(ls -1 $tmp_dir | grep $timestamp | cut -d _ -f 2); do
+        [[ "$id" =~ ^[0-9]+$ ]] || continue
+        [ "$tmp_id" -lt $id ] && tmp_id=$id || :
+    done
+    tmp=${tmp_dir}${timestamp}'_'$(($tmp_id+1))'/'
+}
+
 function setupTmp(){
     tmp_dir='/tmp/shjp/'
     mkdir -p $tmp_dir
     timestamp=$(date +%Y%m%d%H%M%S)
-    tmp_id=$(ls -l $tmp_dir | grep $timestamp | wc -l)
-    tmp=${tmp_dir}${timestamp}'_'${tmp_id}'/'
-    mkdir -p $tmp
+    generateTmpPath
+    while ! mkdir $tmp 2>/dev/null; do
+        generateTmpPath
+    done
 }
 
 function rmExpired(){
