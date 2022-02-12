@@ -27,7 +27,11 @@ jobs:
       run: git submodule update --remote
 
     - name: Test
-      run: ./cmdbbt/start.sh
+      run: |
+        ls -l
+        echo aaaaaaaaaaaaaa
+        ls -l ./cmdbbt
+        ./cmdbbt/start.sh
       
     - name: Push if needed
       run: |
