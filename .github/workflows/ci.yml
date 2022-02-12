@@ -31,10 +31,8 @@ jobs:
 
     - name: Test
       run: |
-        ls -l
-        echo aaaaaaaaaaaaaa
-        ls -l ./cmdbbt
         ./cmdbbt/start.sh
+        echo $?
       
     - name: Push if needed
       run: |
