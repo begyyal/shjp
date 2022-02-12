@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  workflow_dispatch: 
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'README.md'
+      - '.github/**'
+
+jobs:
+  main:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set git configs
+      run: |
+        git config --global user.email "begyyal@gmail.com"
+        git config --global user.name "begyyal-ghost"
+
+    - name: Attach HEAD
+      run: git checkout main
+
+    - name: Update submodules
+      run: git submodule udpate --remote
+
+    - name: Test
+      run: ./cmdbbt/start.sh
+      
+    - name: Push if needed
+      run: |
+        git diff --exit-code || (git add . && git commit -m "BY-CI" && git push origin HEAD)
