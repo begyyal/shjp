@@ -1,3 +1,5 @@
+[![CI](https://github.com/begyyal/shjp/actions/workflows/ci.yml/badge.svg)](https://github.com/begyyal/shjp/actions/workflows/ci.yml)
+
 # Overview
 
 SHJP is json parser writed by shell script in one file.  
