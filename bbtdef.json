@@ -1,6 +1,7 @@
 {
 	"need": [
-		"shjp.sh"
+		"shjp.sh",
+		"resource/cmdbbt/test.json"
 	],
 	"resource": "resource/cmdbbt/",
 	"operations": [
@@ -23,8 +24,10 @@
 				{
 					"act": "console-output",
 					"value": [
-						"hello.jar",
-						"mimimi"
+						"true",
+						"aaaa",
+						"false",
+						"null"
 					]
 				}
 			]
@@ -40,6 +43,43 @@
 				{
 					"act": "console-output",
 					"value": "32"
+				}
+			]
+		},
+		{
+			"name": "4_literal_comp",
+			"command": [
+				"./shjp.sh ./test.json > comp",
+				"./shjp.sh -g ./comp true",
+				"./shjp.sh -g ./comp false",
+				"./shjp.sh -g ./comp null"
+			],
+			"exitCode": 0,
+			"expected": [
+				{
+					"act": "console-output",
+					"value": [
+						"true",
+						"false",
+						"null"
+					]
+				}
+			]
+		},
+		{
+			"name": "5_literal_direct",
+			"command": [
+				"./shjp.sh ./test.json true false null"
+			],
+			"exitCode": 0,
+			"expected": [
+				{
+					"act": "console-output",
+					"value": [
+						"true",
+						"false",
+						"null"
+					]
 				}
 			]
 		}

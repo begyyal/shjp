@@ -30,10 +30,7 @@ jobs:
       run: git submodule update --remote
 
     - name: Test
-      run: |
-        ./cmdbbt/start.sh
-        echo $?
+      run: ./cmdbbt/start.sh
       
     - name: Push if needed
-      run: |
-        git diff --exit-code || (git add . && git commit -m "BY-CI" && git push origin HEAD)
+      run: git diff --exit-code || (git add . && git commit -m "BY-CI" && git push origin HEAD)

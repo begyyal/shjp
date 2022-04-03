@@ -157,42 +157,6 @@ LF=$'\n'
 CR=$'\r'
 TAB=$'\t'
 
-function preProcess(){
-
-    json_value=${json_value_origin//$CR/}
-    json_value=${json_value//$LF/}
-    flg_on_read=''
-    nr_index=0
-    
-    for i in `seq 1 ${#json_value}`; do    
-        char=${json_value:(($i-1)):1}
-        if [ "$flg_on_read" = 1 ]; then
-            [ "a$char" != 'a"' -o "a${json_value:(($i-2)):1}" = 'a\' ] && continue || :
-            str_shelf+=("${json_value:$marked_idx:(($i-$marked_idx-1))}")
-            flg_on_read=''
-            pre_processed_jv+='"'$((nr_index++))
-        elif [ "$char" = '"' ]; then
-            marked_idx=$i
-            flg_on_read=1
-        elif [ "a$char" != "a " -a "a$char" != "a$TAB" ]; then
-            pre_processed_jv+=$char
-        fi
-    done
-}
-
-if [ -f "$input" ]; then
-    json_value_origin="$(cat $input)"
-else
-    json_value_origin="$input"
-fi    
-
-declare -a str_shelf=()
-pre_processed_jv=''
-preProcess
-
-touch ${tmp}answer
-[ ${#targets[@]} -ne 0 ] && flg_direct=1 || :
-
 function printStacktrace() {
     index=1
     while frame=($(caller "${index}")); do
@@ -207,6 +171,73 @@ function invalidFormatError(){
     printStacktrace
     end 1
 }
+
+function checkLiteral(){
+    str=$1
+    temp+=$char
+    [ ${#temp} != ${#str} ] && return || :
+    if [ "$temp" = $str ]; then
+        pre_processed_jv+=${str:0:1}
+        flg_on_read=''
+        literal=''
+        temp=''
+    else
+        invalidFormatError
+    fi
+}
+
+function preProcess(){
+
+    json_value=${json_value_origin//$CR/}
+    json_value=${json_value//$LF/}
+    flg_on_read='' # 1-str/2-literal
+    nr_index=0
+    temp=''
+    literal=''
+
+    for i in `seq 1 ${#json_value}`; do    
+        char=${json_value:(($i-1)):1}
+        if [ "$flg_on_read" = 1 ]; then
+            [ "a$char" != 'a"' -o "a${json_value:(($i-2)):1}" = 'a\' ] && continue || :
+            str_shelf+=("${json_value:$marked_idx:(($i-$marked_idx-1))}")
+            flg_on_read=''
+            pre_processed_jv+='"'$((nr_index++))
+        elif [ "$flg_on_read" = 2 ]; then 
+            checkLiteral $literal
+        elif [ "$char" = '"' ]; then
+            marked_idx=$i
+            flg_on_read=1
+        elif [ "$char" = 't' ]; then
+            checkLiteral true
+            literal=true
+            flg_on_read=2
+        elif [ "$char" = 'f' ]; then
+            checkLiteral false
+            literal=false
+            flg_on_read=2
+        elif [ "$char" = 'n' ]; then
+            checkLiteral null
+            literal=null
+            flg_on_read=2
+        elif [ "a$char" != "a " -a "a$char" != "a$TAB" ]; then
+            pre_processed_jv+=$char
+        fi
+    done
+    [ -n "$flg_on_read" ] && invalidFormatError || :
+}
+
+if [ -f "$input" ]; then
+    json_value_origin="$(cat $input)"
+else
+    json_value_origin="$input"
+fi    
+
+declare -a str_shelf=()
+pre_processed_jv=''
+preProcess
+
+touch ${tmp}answer
+[ ${#targets[@]} -ne 0 ] && flg_direct=1 || :
 
 function record(){
 
@@ -278,6 +309,15 @@ function restoreObjValue(){
         obj_value+=\"${str_shelf[$str_idx]}\"
         str_idx=''
         flg_continue=1
+    elif [ $char = 't' ]; then
+        obj_value+=true
+        flg_continue=1
+    elif [ $char = 'f' ]; then
+        obj_value+=false
+        flg_continue=1
+    elif [ $char = 'n' ]; then
+        obj_value+=null
+        flg_continue=1
     else
         obj_value+=$char
     fi
@@ -304,6 +344,11 @@ function identifyClosingBracket(){
     fi
 
     [ -n "$depth_counter" ] && flg_continue=1 || :
+}
+
+function next(){
+    flg_force=2
+    flg_state=''
 }
 
 function processAarray(){
@@ -349,6 +394,15 @@ function processAarray(){
                 flg_on_read=3
                 depth_counter='['
                 obj_value='['
+            elif [ "$char" = 't' ]; then
+                next 
+                echo true
+            elif [ "$char" = 'f' ]; then
+                next 
+                echo false
+            elif [ "$char" = 'n' ]; then
+                next 
+                echo null
             else
                 invalidFormatError
             fi
@@ -361,8 +415,7 @@ function processAarray(){
             str_idx=''
 
             flg_on_read=''
-            flg_force=2
-            flg_state=''
+            next
             
         elif [ "$flg_on_read" = 2 ]; then
             
@@ -378,10 +431,7 @@ function processAarray(){
             [ -n "$flg_continue" ] && continue || :
             
             flg_on_read=''
-            if [ "$flg_state" = 2 ]; then
-                flg_force=2
-                flg_state=''
-            fi
+            [ "$flg_state" = 2 ] && next || :
 
             echo "$obj_value"
             obj_value=''
@@ -456,6 +506,15 @@ function r4process(){
                 flg_on_read=4
                 depth_counter='['
                 obj_value='['
+            elif [ "$char" = 't' ]; then
+                next 
+                record true
+            elif [ "$char" = 'f' ]; then
+                next 
+                record false
+            elif [ "$char" = 'n' ]; then
+                next 
+                record null
             else
                 invalidFormatError
             fi
@@ -484,8 +543,7 @@ function r4process(){
                 done
     
             elif [ "$flg_state" = 3 ]; then
-                flg_force=2
-                flg_state=''
+                next
                 record "$str_value"
             fi
 
@@ -521,10 +579,7 @@ function r4process(){
                 [ "$flg_on_read" = 4 ] && obj_value="$output" || :
             fi
 
-            if [ "$flg_state" = 3 ]; then
-                flg_force=2
-                flg_state=''
-            fi
+            [ "$flg_state" = 3 ] && next || :
 
             record "$obj_value"
             obj_value=''

@@ -1,0 +1,30 @@
+{
+  "ne": {
+    "hello.jar": 12,
+    "mimimi": 22,
+    "ed": 32
+  },
+  "ne.ed": [
+    true,
+    "aaaa",
+    false,
+    null
+  ],
+  "true": true,
+  "false": false,
+  "null": null,
+  "operations": {
+    "name": "test1",
+    "command": "java -jar hello.jar",
+    "expected": [
+      {
+        "act": "console-output",
+        "value": "hello!"
+      },
+      {
+        "act": null,
+        "value": null
+      }
+    ]
+  }
+}
