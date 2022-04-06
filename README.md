@@ -91,7 +91,7 @@ It can gets value in every element of array as below.
 |t|Please refer [here](#Get&#32;value&#32;directly).|
 |g|Please refer [here](#Get&#32;value&#32;from&#32;the&#32;compilation&#32;result).|
 |e|Handle as an error if specified targets is empty.|
-|v|Output version.(Anything of input and option is ignored.)|
+|v|Output version.(Anything of input and other option is ignored.)|
 
 ## Attention
 
