@@ -143,7 +143,7 @@
 			]
 		},
 		{
-			"name": "9_emptyarray_comp",
+			"name": "10_emptyarray_comp",
 			"command": [
 				"./shjp ./test.json > comp",
 				"./shjp ./comp -g empty | wc -l"
@@ -153,6 +153,17 @@
 				{
 					"act": "console-output",
 					"value": 0
+				}
+			]
+		},
+		{
+			"name": "11_comma_escape",
+			"command": "./shjp ./test.json -t 'ne.a\\,b'",
+			"exitCode": 0,
+			"expected": [
+				{
+					"act": "console-output",
+					"value": "comma"
 				}
 			]
 		}
