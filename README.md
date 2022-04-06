@@ -1,4 +1,4 @@
-[![CI](https://github.com/begyyal/shjp/actions/workflows/push-develop.yml/badge.svg)](https://github.com/begyyal/shjp/actions/workflows/push-develop.yml)
+[![CI](https://github.com/begyyal/shjp/actions/workflows/ci.yml/badge.svg)](https://github.com/begyyal/shjp/actions/workflows/ci.yml)
 
 # Overview
 

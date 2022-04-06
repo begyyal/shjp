@@ -22,43 +22,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-if [ "$1" = -g ]; then
-    flg_get=1
-    shift
-fi
-if [ -p /dev/stdin ]; then
-    input="$(cat)"
-    if [ -z "$input" ]; then
-        input=$1
-        shift
-    fi
-else
-    input=$1
-    shift
-fi
-
-if [ -z "$input" ]; then
-    echo "Input value is empty." >&2
-    exit 1
-fi
-
-function generateTmpPath(){
-    tmp_id="-1"
-    for id in $(ls -1 $tmp_dir | grep $timestamp | cut -d _ -f 2); do
-        [[ "$id" =~ ^[0-9]+$ ]] || continue
-        [ "$tmp_id" -lt $id ] && tmp_id=$id || :
-    done
-    tmp=${tmp_dir}${timestamp}'_'$(($tmp_id+1))'/'
-}
-
 function setupTmp(){
-    tmp_dir='/tmp/shjp/'
+    tmp_dir='/tmp/begyyal/shjp/'
     mkdir -p $tmp_dir
     timestamp=$(date +%Y%m%d%H%M%S)
-    generateTmpPath
-    while ! mkdir $tmp 2>/dev/null; do
-        generateTmpPath
-    done
+    tmp=${tmp_dir}${timestamp}'_'$$'/'
+    mkdir $tmp 2>/dev/null
 }
 
 function rmExpired(){
@@ -76,23 +45,68 @@ function rmExpired(){
 setupTmp
 rmExpired
 
+LF=$'\n'
+CR=$'\r'
+TAB=$'\t'
+
 function end(){
     rm -rdf ${tmp}
     exit $1
 }
 
+function processShortOpt(){
+    opt=$1
+    for i in `seq 2 ${#opt}`; do
+        char=${opt:(($i-1)):1}
+        if [ "a$char" = at ]; then
+            argext_flag=1
+        elif [ "a$char" = ag ]; then
+            opt_flag=$(($opt_flag|1))
+        elif [ "a$char" = ae ]; then
+            opt_flag=$(($opt_flag|2))
+        elif [ "a$char" = ar ]; then
+            argext_flag=2
+            opt_flag=$(($opt_flag|4))
+        else
+            echo "The specified option as $char is invalid." >&2
+            end 1
+        fi
+    done
+}
+
+function setTargets(){
+    combined=$1
+    target=''
+    for i in `seq 1 ${#combined}`; do    
+        char=${combined:(($i-1)):1}
+        if [ "a$char" != 'a,' -o "a${combined:(($i-2)):1}" = 'a\' ]; then
+            target+=$char
+        else
+            targets+=("$target")
+            target=''
+        fi
+    done
+    targets+=("$target")
+}
+
 function extractValue(){
 
+    input="$json_value_origin"
     if [ ${#targets[@]} -eq 0 ]; then
         echo "Arguments lack." >&2
         end 1
-    elif [ ! -f $input ]; then
-        echo '-g option requires a file path as first argument.' >&2
-        end 1
+    elif [ ! -f "$init_arg" ]; then
+        if [ -n "$pipe_input" ]; then
+            input="$pipe_input"
+            targets+=("$init_arg")
+        else
+            echo '-g option requires a file path as first argument, or pipe input.' >&2
+            end 1
+        fi
     fi
 
-    for target in ${targets[@]}; do
-        cat $input |
+    for target in "${targets[@]}"; do
+        echo "$input" |
         awk '{
             if(keySeq=="1"){
                 if($0 ~ /^4.*$/){
@@ -142,21 +156,6 @@ function extractValue(){
     cat ${tmp}answer
 }
 
-declare -a targets
-while [ -n "$1" ]; do
-    targets+=($1)
-    shift
-done
-
-if [ -n "$flg_get" ]; then
-    extractValue
-    end 0
-fi
-
-LF=$'\n'
-CR=$'\r'
-TAB=$'\t'
-
 function printStacktrace() {
     index=1
     while frame=($(caller "${index}")); do
@@ -167,6 +166,7 @@ function printStacktrace() {
 
 function invalidFormatError(){
     echo 'This json has invalid format.' >&2
+    [ -n "$1" ] && echo 'detail -> '"$@" >&2
     echo $json_value >&2
     printStacktrace
     end 1
@@ -177,31 +177,63 @@ function checkLiteral(){
     temp+=$char
     [ ${#temp} != ${#str} ] && return || :
     if [ "$temp" = $str ]; then
-        pre_processed_jv+=${str:0:1}
+        pre_processed_jv_tmp+=${str:0:1}
         flg_on_read=''
         literal=''
         temp=''
     else
-        invalidFormatError
+        invalid=1
     fi
+}
+
+function identifyBracket(){
+
+    if [ "$char" = '{' ]; then
+        depth_counter=$depth_counter'{'
+    elif [ "$char" = '['  ]; then
+        depth_counter=$depth_counter'['
+    elif [ "$char" = '}'  ]; then
+        if [ "${depth_counter: -1}" = '{' ]; then
+            depth_counter=${depth_counter:0:((${#depth_counter}-1))}
+        else 
+            invalidFormatError
+        fi
+    elif [ "$char" = ']'  ]; then
+        if [ "${depth_counter: -1}" = '[' ]; then
+            depth_counter=${depth_counter:0:((${#depth_counter}-1))}
+        else 
+            invalidFormatError
+        fi
+    fi
+
+    [ -n "$depth_counter" ] && flg_continue=1 || :
 }
 
 function preProcess(){
 
+    pre_processed_jv=''
+    pre_processed_jv_tmp=''
     json_value=${json_value_origin//$CR/}
     json_value=${json_value//$LF/}
     flg_on_read='' # 1-str/2-literal
     nr_index=0
+    jv_count=0
     temp=''
     literal=''
-
+    invalid=''
+    depth_counter=''
+    
     for i in `seq 1 ${#json_value}`; do    
         char=${json_value:(($i-1)):1}
         if [ "$flg_on_read" = 1 ]; then
             [ "a$char" != 'a"' -o "a${json_value:(($i-2)):1}" = 'a\' ] && continue || :
-            str_shelf+=("${json_value:$marked_idx:(($i-$marked_idx-1))}")
+            if [ $jv_count != 0 ]; then
+                echo "${json_value:$marked_idx:(($i-$marked_idx-1))}" >> ${tmp}str_shelf_${jv_count}
+            else
+                str_shelf+=("${json_value:$marked_idx:(($i-$marked_idx-1))}")
+            fi
             flg_on_read=''
-            pre_processed_jv+='"'$((nr_index++))
+            pre_processed_jv_tmp+='"'$((nr_index++))
         elif [ "$flg_on_read" = 2 ]; then 
             checkLiteral $literal
         elif [ "$char" = '"' ]; then
@@ -220,24 +252,31 @@ function preProcess(){
             literal=null
             flg_on_read=2
         elif [ "a$char" != "a " -a "a$char" != "a$TAB" ]; then
-            pre_processed_jv+=$char
+            
+            pre_processed_jv_tmp+=$char
+            identifyBracket
+            
+            if [ -z "$depth_counter" ]; then
+                if [ -z "$pre_processed_jv" ]; then
+                    pre_processed_jv="$pre_processed_jv_tmp"
+                else
+                    jv_shelf+=("$pre_processed_jv_tmp")
+                fi
+                nr_index=0
+                ((jv_count++))
+                pre_processed_jv_tmp=''
+            fi
         fi
     done
-    [ -n "$flg_on_read" ] && invalidFormatError || :
+    [ -n "$flg_on_read" ] && invalid=2 || :
 }
 
-if [ -f "$input" ]; then
-    json_value_origin="$(cat $input)"
-else
-    json_value_origin="$input"
-fi    
-
-declare -a str_shelf=()
-pre_processed_jv=''
-preProcess
-
-touch ${tmp}answer
-[ ${#targets[@]} -ne 0 ] && flg_direct=1 || :
+function callThis(){
+    arg_jv="${jv_shelf[$((${1}-1))]}" 
+    targets_combined=$(for t in "${targets[@]}"; do echo -n ${t},; done)
+    $0 "$arg_jv" -r ${tmp}str_shelf_$1 -t "${targets_combined:0:-1}" &
+    [ $? -ne 0 ] && end 1 || :
+}
 
 function record(){
 
@@ -323,29 +362,6 @@ function restoreObjValue(){
     fi
 }
 
-function identifyClosingBracket(){
-
-    if [ "$char" = '{' ]; then
-        depth_counter=$depth_counter'{'
-    elif [ "$char" = '['  ]; then
-        depth_counter=$depth_counter'['
-    elif [ "$char" = '}'  ]; then
-        if [ "${depth_counter: -1}" = '{' ]; then
-            depth_counter=${depth_counter:0:((${#depth_counter}-1))}
-        else 
-            invalidFormatError
-        fi
-    elif [ "$char" = ']'  ]; then
-        if [ "${depth_counter: -1}" = '[' ]; then
-            depth_counter=${depth_counter:0:((${#depth_counter}-1))}
-        else 
-            invalidFormatError
-        fi
-    fi
-
-    [ -n "$depth_counter" ] && flg_continue=1 || :
-}
-
 function next(){
     flg_force=2
     flg_state=''
@@ -427,7 +443,7 @@ function processAarray(){
             restoreObjValue
             [ -n "$flg_continue" ] && continue || :
 
-            identifyClosingBracket
+            identifyBracket
             [ -n "$flg_continue" ] && continue || :
             
             flg_on_read=''
@@ -475,15 +491,15 @@ function r4process(){
         if [ -n "$flg_force" ]; then
 
             if [ "$flg_force" = 1 ]; then
-                [ "$char" != '"' ] && invalidFormatError || :
+                [ "$char" != '"' ] && invalidFormatError $i || :
                 flg_force=''
                 flg_on_read=1
             elif [ "$flg_force" = 2 ]; then
-                [ "$char" != ',' ] && invalidFormatError || :
+                [ "$char" != ',' ] && invalidFormatError $i || :
                 flg_state=1
                 flg_force=1
             elif [ "$flg_force" = 3 ]; then
-                [ "$char" != ':' ] && invalidFormatError || :
+                [ "$char" != ':' ] && invalidFormatError $i || :
                 flg_force=''
                 flg_state=2
             fi
@@ -559,7 +575,7 @@ function r4process(){
                 [ -n "$flg_continue" ] && continue || :
             fi
 
-            identifyClosingBracket
+            identifyBracket
             [ -n "$flg_continue" ] && continue || :
             
             indexed_obj_value="${json_value:(($marked_idx-1)):(($i-$marked_idx+1))}"
@@ -587,14 +603,75 @@ function r4process(){
     done
 }
 
+declare -a targets=()
+declare -a str_shelf=()
+opt_flag=0 # 1-compget/2-checkerr/4-recursive
+init_arg=''
+rcount=0
+argext_flag='' # 1-target/2-recursive
+
+if [ -p /dev/stdin ]; then
+    pipe_input="$(cat)"
+fi
+
+for arg in "$@"; do
+    if [ -n "$argext_flag" ]; then
+        if [ "$argext_flag" = 1 ]; then
+            setTargets "$arg"
+        elif [ "$argext_flag" = 2 ]; then
+            while read str; do 
+                str=${str//$CR/}
+                str=${str//$LF/}
+                str_shelf+=("$str")
+            done < <(cat "$arg")
+        fi
+        argext_flag=''
+    elif [[ "$arg" =~ ^-.+ ]]; then
+        processShortOpt "$arg"
+    elif [ -z "$init_arg" ]; then
+        init_arg="$arg"
+    fi
+done
+
+if [ -f "$init_arg" ]; then
+    json_value_origin="$(cat $init_arg)"
+else
+    json_value_origin="$init_arg"
+fi    
+
+if [ $(($opt_flag&1)) != 0 ]; then
+    extractValue
+    end 0
+fi
+
+touch ${tmp}answer ${tmp}following_answers
+declare -a jv_shelf=()
+
+if [ $(($opt_flag&4)) != 0 ]; then 
+    pre_processed_jv="$json_value_origin"
+else
+    preProcess
+    if [ -n "$invalid" -o "$pre_processed_jv" = "$json_value" ]; then
+        json_value_origin="$pipe_input"
+        targets+=($init_arg)
+        preProcess
+        [ -n "$invalid" ] && invalidFormatError $invalid || :
+    fi
+    for i in `seq 1 ${#jv_shelf[@]}`; do
+        callThis $i >> ${tmp}following_answers
+    done
+fi
+
+[ ${#targets[@]} -ne 0 ] && flg_direct=1 || :
+
 r4process "$pre_processed_jv" root
 
-if [ -n "$flg_direct" ]; then
+if [ -n "$flg_direct" -a $(($opt_flag&2)) != 0 ]; then
     if [ ! -f ${tmp}answered_targets ]; then
         echo "Specified targets is not found." >&2
         end 1
     fi
-    for target in ${targets[@]}; do
+    for target in "${targets[@]}"; do
         if ! cat ${tmp}answered_targets | grep -sq "${target//\\/\\\\}" ; then
             echo "$target is not found." >&2
             end 1
@@ -602,6 +679,8 @@ if [ -n "$flg_direct" ]; then
     done
 fi
 
+wait
+cat ${tmp}following_answers >> ${tmp}answer
 cat ${tmp}answer
 
 end 0
