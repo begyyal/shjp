@@ -5,7 +5,7 @@ on:
     branches: [ develop ]
     types: [ opened, synchronize ]
     paths:
-      - 'shjp.sh'
+      - 'shjp'
       - 'bbtdef.json'
 
 jobs:
