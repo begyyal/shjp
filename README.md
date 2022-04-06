@@ -61,7 +61,7 @@ If the argument as above `[1]` is empty and stdin is pipe, it is used instead of
 
 ***
 ### Spread processing to array.
-It can get value in every element of array as below.
+It can gets value in every element of array as below.
 
 1. json  
 ```
