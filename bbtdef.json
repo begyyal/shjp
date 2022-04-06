@@ -124,7 +124,9 @@
 						"1mimimi",
 						"422",
 						"1ed",
-						"432"
+						"432",
+						"1a\\,b",
+						"4comma"
 					]
 				}
 			]
@@ -158,7 +160,7 @@
 		},
 		{
 			"name": "11_comma_escape",
-			"command": "./shjp ./test.json -t 'ne.a\\,b'",
+			"command": "./shjp ./test.json -t ne.a\\,b",
 			"exitCode": 0,
 			"expected": [
 				{
