@@ -37,7 +37,6 @@ jobs:
 
     - name: Merge to develop
       run: |
-        git fetch
         git checkout develop
         git merge main
         git push origin develop
@@ -45,8 +44,11 @@ jobs:
     - name: Update tag
       run: |
         version=${{ github.ref_name }}
-        git tag -d ${version%%.*}
-        git tag -a ${version%%.*} -m "BY-CI"
+        msg="$(git tag -n9 $version | cut -d ' ' -f 2- | sed 's/^[ \t]*//')"
+        git tag -d ${version}
+        git tag -a ${version} -m "$msg"
+        git push origin ${version} -f
+        git tag ${version%%.*} -f
         git push origin ${version%%.*} -f
 
     - name: Post tweet
