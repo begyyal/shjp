@@ -1,13 +1,13 @@
 {
 	"need": [
-		"shjp.sh",
+		"shjp",
 		"resource/cmdbbt/test.json"
 	],
 	"resource": "resource/cmdbbt/",
 	"operations": [
 		{
 			"name": "test1",
-			"command": "./shjp.sh ./test.json ne.mimimi",
+			"command": "./shjp ./test.json -t ne.mimimi",
 			"exitCode": 0,
 			"expected": [
 				{
@@ -18,7 +18,7 @@
 		},
 		{
 			"name": "test2",
-			"command": "./shjp.sh ./test.json ne\\.ed",
+			"command": "./shjp ./test.json -t ne\\.ed",
 			"exitCode": 0,
 			"expected": [
 				{
@@ -35,8 +35,8 @@
 		{
 			"name": "test3",
 			"command": [
-				"./shjp.sh ./test.json > comp",
-				"./shjp.sh -g ./comp ne.ed"
+				"./shjp ./test.json > comp",
+				"./shjp ./comp -g ne.ed"
 			],
 			"exitCode": 0,
 			"expected": [
@@ -49,10 +49,10 @@
 		{
 			"name": "4_literal_comp",
 			"command": [
-				"./shjp.sh ./test.json > comp",
-				"./shjp.sh -g ./comp true",
-				"./shjp.sh -g ./comp false",
-				"./shjp.sh -g ./comp null"
+				"./shjp ./test.json > comp",
+				"./shjp ./comp -g true",
+				"./shjp ./comp -g false",
+				"./shjp ./comp -g null"
 			],
 			"exitCode": 0,
 			"expected": [
@@ -69,7 +69,7 @@
 		{
 			"name": "5_literal_direct",
 			"command": [
-				"./shjp.sh ./test.json true false null"
+				"./shjp ./test.json -t true,false,null"
 			],
 			"exitCode": 0,
 			"expected": [
@@ -80,6 +80,79 @@
 						"false",
 						"null"
 					]
+				}
+			]
+		},
+		{
+			"name": "6_array",
+			"command": [
+				"./shjp ./test.json -t operations.expected | ./shjp -t act"
+			],
+			"exitCode": 0,
+			"expected": [
+				{
+					"act": "console-output",
+					"value": [
+						"console-output",
+						"null",
+						"hello"
+					]
+				}
+			]
+		},
+		{
+			"name": "7_opt_error",
+			"command": [
+				"./shjp ./test.json -t zgzgzgzg -e"
+			],
+			"exitCode": 1,
+			"expected": [
+			]
+		},
+		{
+			"name": "8_pipeinput",
+			"command": [
+				"./shjp ./test.json -t ne | ./shjp"
+			],
+			"exitCode": 0,
+			"expected": [
+				{
+					"act": "console-output",
+					"value": [
+						"1hello\\.jar",
+						"412",
+						"1mimimi",
+						"422",
+						"1ed",
+						"432"
+					]
+				}
+			]
+		},
+		{
+			"name": "9_emptyarray",
+			"command": [
+				"./shjp ./test.json -t empty | wc -l"
+			],
+			"exitCode": 0,
+			"expected": [
+				{
+					"act": "console-output",
+					"value": 0
+				}
+			]
+		},
+		{
+			"name": "9_emptyarray_comp",
+			"command": [
+				"./shjp ./test.json > comp",
+				"./shjp ./comp -g empty | wc -l"
+			],
+			"exitCode": 0,
+			"expected": [
+				{
+					"act": "console-output",
+					"value": 0
 				}
 			]
 		}

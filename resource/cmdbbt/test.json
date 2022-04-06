@@ -13,6 +13,7 @@
   "true": true,
   "false": false,
   "null": null,
+  "empty": [],
   "operations": {
     "name": "test1",
     "command": "java -jar hello.jar",
@@ -24,6 +25,10 @@
       {
         "act": null,
         "value": null
+      },
+      {
+        "act": "hello",
+        "value": 12345
       }
     ]
   }

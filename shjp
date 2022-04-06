@@ -61,6 +61,7 @@ function processShortOpt(){
         if [ "a$char" = at ]; then
             argext_flag=1
         elif [ "a$char" = ag ]; then
+            argext_flag=1
             opt_flag=$(($opt_flag|1))
         elif [ "a$char" = ae ]; then
             opt_flag=$(($opt_flag|2))
@@ -283,7 +284,7 @@ function record(){
     if [ -n "$flg_direct" ]; then
         if [ $(($flg_target&1)) != 0 ]; then
             echo "$key" >> ${tmp}answered_targets
-            echo "$1" >> ${tmp}answer
+            [ -z "$empty" ] && echo "$1" >> ${tmp}answer || :
         else : 
         fi
     else
@@ -301,7 +302,7 @@ function record(){
                 [ -n "$output" ] && echo "$output" || :
                 end 1
             fi
-        else
+        elif [ -z "$empty" ]; then
             echo "$1" | awk '{print "4" $0}' >> ${tmp}answer
         fi
         [ "$key_prefix" = 2 -o "$key_prefix" = 3 ] && echo ${key_prefix}${key} >> ${tmp}answer || :
@@ -579,6 +580,8 @@ function r4process(){
             [ -n "$flg_continue" ] && continue || :
             
             indexed_obj_value="${json_value:(($marked_idx-1)):(($i-$marked_idx+1))}"
+            [ "${#indexed_obj_value}" = 2 ] && empty=1 || :
+
             if [ -z "$flg_direct" -a "$flg_on_read" = 3 ]; then
                 obj_value="$indexed_obj_value"
 
@@ -599,6 +602,7 @@ function r4process(){
 
             record "$obj_value"
             obj_value=''
+            empty=''
         fi
     done
 }
