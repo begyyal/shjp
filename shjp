@@ -99,7 +99,6 @@ function extractValue(){
     elif [ ! -f "$init_arg" ]; then
         if [ -n "$pipe_input" ]; then
             input="$pipe_input"
-            targets+=("$init_arg")
         else
             echo '-g option requires a file path as first argument, or pipe input.' >&2
             end 1
