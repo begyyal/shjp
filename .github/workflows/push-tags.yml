@@ -13,6 +13,8 @@ jobs:
     steps:
 
     - uses: actions/checkout@v2
+      with:
+        ref: main
 
     - name: Set git configs
       run: |
@@ -35,7 +37,13 @@ jobs:
       run: |
         git add . 
         git commit -m "update version" 
-        git push origin HEAD
+        git push origin main
+
+    - name: Merge to develop
+      run: |
+        git checkout develop
+        git merge main
+        git push origin develop
 
     - name: Post tweet
       run: |
