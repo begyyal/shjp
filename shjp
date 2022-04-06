@@ -554,6 +554,7 @@ function r4process(){
                 flg_force=3
                 flg_on_read=''
                 str_value=${str_value//./\\.}
+                str_value=${str_value//,/\\,}
                 [ "$layer" = 'root' ] && key=$str_value || key=${layer}.${str_value}
                 [ -z "$flg_direct" ] && continue || :
     

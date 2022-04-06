@@ -2,7 +2,8 @@
   "ne": {
     "hello.jar": 12,
     "mimimi": 22,
-    "ed": 32
+    "ed": 32,
+    "a,b": "comma"
   },
   "ne.ed": [
     true,
