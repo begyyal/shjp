@@ -1,4 +1,5 @@
 #!/bin/bash
+version=v1.0.0
 
 # This software is released under the MIT License
 
@@ -65,6 +66,9 @@ function processShortOpt(){
             opt_flag=$(($opt_flag|1))
         elif [ "a$char" = ae ]; then
             opt_flag=$(($opt_flag|2))
+        elif [ "a$char" = av ]; then
+            echo $version
+            end 0
         elif [ "a$char" = ar ]; then
             argext_flag=2
             opt_flag=$(($opt_flag|4))
@@ -155,6 +159,47 @@ function extractValue(){
 
     cat ${tmp}answer
 }
+
+declare -a targets=()
+declare -a str_shelf=()
+opt_flag=0 # 1-compget/2-checkerr/4-recursive
+init_arg=''
+rcount=0
+argext_flag='' # 1-target/2-recursive
+
+if [ -p /dev/stdin ]; then
+    pipe_input="$(cat)"
+fi
+
+for arg in "$@"; do
+    if [ -n "$argext_flag" ]; then
+        if [ "$argext_flag" = 1 ]; then
+            setTargets "$arg"
+        elif [ "$argext_flag" = 2 ]; then
+            while read str; do 
+                str=${str//$CR/}
+                str=${str//$LF/}
+                str_shelf+=("$str")
+            done < <(cat "$arg")
+        fi
+        argext_flag=''
+    elif [[ "$arg" =~ ^-.+ ]]; then
+        processShortOpt "$arg"
+    elif [ -z "$init_arg" ]; then
+        init_arg="$arg"
+    fi
+done
+
+if [ -f "$init_arg" ]; then
+    json_value_origin="$(cat $init_arg)"
+else
+    json_value_origin="$init_arg"
+fi    
+
+if [ $(($opt_flag&1)) != 0 ]; then
+    extractValue
+    end 0
+fi
 
 function printStacktrace() {
     index=1
@@ -284,6 +329,24 @@ function callThis(){
         [ $? -ne 0 ] && end 1 || :
     fi
 }
+
+touch ${tmp}answer ${tmp}following_answers
+declare -a jv_shelf=()
+
+if [ $(($opt_flag&4)) != 0 ]; then 
+    pre_processed_jv="$json_value_origin"
+else
+    preProcess
+    if [ -n "$invalid" -o "$pre_processed_jv" = "$json_value" ]; then
+        json_value_origin="$pipe_input"
+        targets+=($init_arg)
+        preProcess
+        [ -n "$invalid" ] && invalidFormatError $invalid || :
+    fi
+    for i in `seq 1 ${#jv_shelf[@]}`; do
+        callThis $i >> ${tmp}following_answers_$i
+    done
+fi
 
 function record(){
 
@@ -613,65 +676,6 @@ function r4process(){
         fi
     done
 }
-
-declare -a targets=()
-declare -a str_shelf=()
-opt_flag=0 # 1-compget/2-checkerr/4-recursive
-init_arg=''
-rcount=0
-argext_flag='' # 1-target/2-recursive
-
-if [ -p /dev/stdin ]; then
-    pipe_input="$(cat)"
-fi
-
-for arg in "$@"; do
-    if [ -n "$argext_flag" ]; then
-        if [ "$argext_flag" = 1 ]; then
-            setTargets "$arg"
-        elif [ "$argext_flag" = 2 ]; then
-            while read str; do 
-                str=${str//$CR/}
-                str=${str//$LF/}
-                str_shelf+=("$str")
-            done < <(cat "$arg")
-        fi
-        argext_flag=''
-    elif [[ "$arg" =~ ^-.+ ]]; then
-        processShortOpt "$arg"
-    elif [ -z "$init_arg" ]; then
-        init_arg="$arg"
-    fi
-done
-
-if [ -f "$init_arg" ]; then
-    json_value_origin="$(cat $init_arg)"
-else
-    json_value_origin="$init_arg"
-fi    
-
-if [ $(($opt_flag&1)) != 0 ]; then
-    extractValue
-    end 0
-fi
-
-touch ${tmp}answer ${tmp}following_answers
-declare -a jv_shelf=()
-
-if [ $(($opt_flag&4)) != 0 ]; then 
-    pre_processed_jv="$json_value_origin"
-else
-    preProcess
-    if [ -n "$invalid" -o "$pre_processed_jv" = "$json_value" ]; then
-        json_value_origin="$pipe_input"
-        targets+=($init_arg)
-        preProcess
-        [ -n "$invalid" ] && invalidFormatError $invalid || :
-    fi
-    for i in `seq 1 ${#jv_shelf[@]}`; do
-        callThis $i >> ${tmp}following_answers_$i
-    done
-fi
 
 [ ${#targets[@]} -ne 0 ] && flg_direct=1 || :
 
