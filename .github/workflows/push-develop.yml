@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [ develop ]
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+
+    steps:
+    
+    - name: Set git configs
+      run: |
+        git config --global user.email "begyyal@gmail.com"
+        git config --global user.name "begyyal-ghost"
+
+    - uses: begyyal/act_await_wf_execution@v0.1
+      with:
+        workflowName: 'Post processing of PR'
+        timeoutSec: 1200
+    
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        submodules: true
+
+    - name: Update submodules
+      run: git submodule update --remote
+
+    - name: Test
+      run: ./cmdbbt/start.sh
+      
+    - name: Push to main
+      if: success()
+      run: |
+        git fetch
+        git checkout main
+        git merge origin/develop
+        git push origin main

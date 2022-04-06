@@ -1,18 +1,18 @@
-name: CI
+name: Test by sync PR
 
 on:
-  workflow_dispatch: 
-  push:
-    branches: [ main ]
-    paths-ignore:
-      - 'README.md'
+  pull_request:
+    branches: [ develop ]
+    types: [ opened, synchronize ]
+    paths:
+      - 'shjp.sh'
+      - 'bbtdef.json'
 
 jobs:
-  main:
-
+  test:
     runs-on: ubuntu-latest
-
     steps:
+
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
@@ -23,14 +23,8 @@ jobs:
         git config --global user.email "begyyal@gmail.com"
         git config --global user.name "begyyal-ghost"
 
-    - name: Attach HEAD
-      run: git checkout main
-
     - name: Update submodules
       run: git submodule update --remote
 
     - name: Test
       run: ./cmdbbt/start.sh
-      
-    - name: Push if needed
-      run: git diff --exit-code || (git add . && git commit -m "BY-CI" && git push origin HEAD)
