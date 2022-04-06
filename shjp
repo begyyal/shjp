@@ -255,10 +255,15 @@ function preProcess(){
         elif [ "a$char" != "a " -a "a$char" != "a$TAB" ]; then
             
             pre_processed_jv_tmp+=$char
+            depth_counter_bf=$depth_counter
             identifyBracket
             
             if [ -z "$depth_counter" ]; then
-                if [ -z "$pre_processed_jv" ]; then
+                if [[ -z $depth_counter_bf && ! "$char" =~ ^[0-9]+$ ]]; then
+                    echo "The inputs contain invalid value as below." >&2
+                    echo "char at $i ---> $pre_processed_jv_tmp" >&2
+                    end 1
+                elif [ -z "$pre_processed_jv" ]; then
                     pre_processed_jv="$pre_processed_jv_tmp"
                 else
                     jv_shelf+=("$pre_processed_jv_tmp")
@@ -275,8 +280,10 @@ function preProcess(){
 function callThis(){
     arg_jv="${jv_shelf[$((${1}-1))]}" 
     targets_combined=$(for t in "${targets[@]}"; do echo -n ${t},; done)
-    $0 "$arg_jv" -r ${tmp}str_shelf_$1 -t "${targets_combined:0:-1}" &
-    [ $? -ne 0 ] && end 1 || :
+    if [ -e ${tmp}str_shelf_$1 ]; then # ignore arg_jv as literal
+        $0 "$arg_jv" -r ${tmp}str_shelf_$1 -t "${targets_combined:0:-1}" &
+        [ $? -ne 0 ] && end 1 || :
+    fi
 }
 
 function record(){
@@ -662,7 +669,7 @@ else
         [ -n "$invalid" ] && invalidFormatError $invalid || :
     fi
     for i in `seq 1 ${#jv_shelf[@]}`; do
-        callThis $i >> ${tmp}following_answers
+        callThis $i >> ${tmp}following_answers_$i
     done
 fi
 
@@ -684,7 +691,9 @@ if [ -n "$flg_direct" -a $(($opt_flag&2)) != 0 ]; then
 fi
 
 wait
-cat ${tmp}following_answers >> ${tmp}answer
+for i in `seq 1 ${#jv_shelf[@]}`; do
+    cat ${tmp}following_answers_$i >> ${tmp}answer
+done
 cat ${tmp}answer
 
 end 0
