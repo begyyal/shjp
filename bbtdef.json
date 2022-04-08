@@ -179,6 +179,28 @@
 					"value": "spa ce"
 				}
 			]
+		},
+		{
+			"name": "13_minus_number",
+			"command": "./shjp ./test.json -t 'obj1.minus'",
+			"exitCode": 0,
+			"expected": [
+				{
+					"act": "console-output",
+					"value": -123
+				}
+			]
+		},
+		{
+			"name": "14_zero",
+			"command": "./shjp ./test.json -t 'obj1.zero'",
+			"exitCode": 0,
+			"expected": [
+				{
+					"act": "console-output",
+					"value": 0
+				}
+			]
 		}
 	]
 }
