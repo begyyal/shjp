@@ -9,8 +9,7 @@ This has only minumum functions, but you can just copy [./shjp](./shjp) and use 
 
 - MIT Lisense, description is in source file.
 - Compliant to Bash.
-- Not following BMP(Basic Multilingual Plane) as a value representation,  
-  treat it as a string as it is.
+- Handling errors isn't strict because shjp scoped to extract value.
 
 ## Functions
 
@@ -103,3 +102,5 @@ It can gets value in every element of array as below.
   - ng -> `aaa\.bbb` 
   - ok -> `'aaa\.bbb'`
   - ok -> `aaa\\.bbb`
+- Not following BMP(Basic Multilingual Plane) as a value representation,  
+  treat it as a string as it is.
