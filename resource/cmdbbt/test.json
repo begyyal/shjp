@@ -16,7 +16,9 @@
   "null": null,
   "empty": [],
   "obj1": {
-    "a a": "spa ce"
+    "a a": "spa ce",
+    "minus": -123,
+    "zero": 0
   },
   "operations": {
     "name": "test1",
