@@ -336,7 +336,7 @@ function preProcess(){
                 else
                     jv_shelf+=("$pre_processed_jv_tmp")
                 fi
-                nr_index=0
+                str_idx_count=0; num_idx_count=0;
                 ((jv_count++))
                 pre_processed_jv_tmp=''
             fi
@@ -374,6 +374,7 @@ else
 fi
 
 function record(){
+    type_of_read=${2:-$flg_on_read}
     if [ -n "$flg_direct" ]; then
         if [ $(($flg_target&1)) != 0 ]; then
             echo "$key" >> ${tmp}answered_targets
@@ -381,15 +382,15 @@ function record(){
         else : 
         fi
     else
-        if [ "$flg_on_read" = 1 -o "$flg_on_read" = 2 ]; then
+        if [ "$type_of_read" = 1 -o "$type_of_read" = 2 ]; then
             key_prefix=1
-        elif [ "$flg_on_read" = 3 ]; then
+        elif [ "$type_of_read" = 3 ]; then
             key_prefix=3
-        elif [ "$flg_on_read" = 4 ]; then
+        elif [ "$type_of_read" = 4 ]; then
             key_prefix=2
         fi
         echo ${key_prefix}${key} >> ${tmp}answer
-        if [ "$flg_on_read" = 3 ]; then
+        if [ "$type_of_read" = 3 ]; then
             output=$(r4process "$1" "$key")
             if [ $? -ne 0 ]; then
                 [ -n "$output" ] && echo "$output" || :
@@ -405,31 +406,41 @@ function record(){
     key=''
 }
 
+function setIndexedValue(){
+    idx+=$char
+    if [[ "${json_value:$i:1}" =~ ^[0-9]$ ]]; then
+        flg_continue=1
+        return 0
+    fi
+    [ -n "$1" ] && indexed_value=${num_shelf[$idx]} || indexed_value="${str_shelf[$idx]}"
+    idx=''
+    flg_continue=''
+}
+
 function restoreObjValue(){
-    if [ -n "$str_idx" ]; then
-        if [[ "${json_value:$i:1}" =~ ^[0-9]$ ]]; then
-            str_idx+=${json_value:$i:1}
-            flg_continue=1
-            return 0
-        fi
-        obj_value+=\"${str_shelf[$str_idx]}\"
-        str_idx=''
+    if [ "$flag_on_restore" = 1 ]; then
+        setIndexedValue
+        [ -n "$flg_continue" ] && return 0 || :
+        flag_on_restore=''
         flg_continue=1
-    elif [ -n "$num_idx" ]; then
-        if [[ "${json_value:$i:1}" =~ ^[0-9]$ ]]; then
-            num_idx+=${json_value:$i:1}
-            flg_continue=1
-            return 0
-        fi
-        obj_value+=${num_shelf[num_idx]}
-        num_idx=''
+        obj_value+="\"$indexed_value\""
+    elif [ "$flag_on_restore" = 2 ]; then
+        setIndexedValue 1
+        [ -n "$flg_continue" ] && return 0 || :
+        flag_on_restore=''
         flg_continue=1
+        obj_value+="$indexed_value"
     elif [ $char = '"' ]; then
-        str_idx=${json_value:$i:1}
+        flag_on_restore=1
         flg_continue=1
     elif [[ $char =~ ^[0-9]$ ]]; then
-        num_idx=${json_value:$i:1}
+        setIndexedValue 1
+        if [ -n "$flg_continue" ]; then
+            flag_on_restore=2
+            return 0
+        fi
         flg_continue=1
+        obj_value+="$indexed_value"
     elif [ $char = 't' ]; then
         obj_value+=true
         flg_continue=1
@@ -447,7 +458,6 @@ function restoreObjValue(){
 function next(){
     flg_force=2
     flg_state=''
-    flg_on_read=''
 }
 
 function replaceIdx(){
@@ -468,18 +478,18 @@ function processAarray(){
     flg_state=1 # 1-distinguish value/2-extract value
     flg_on_read='' # 1-str/2-num/3-array or obj
     marked_idx=0
-    key=''
-    depth_counter=''
+    key=''; depth_counter='';
+    flag_on_restore='' # 1-str/2-num
 
     for i in `seq 1 ${#json_value}`; do
         char=${json_value:(($i-1)):1}
         if [ -n "$flg_force" ]; then
             if [ "$flg_force" = 1 ]; then
-                [ "$char" != '"' ] && invalidFormatError || :
+                [ "$char" != '"' ] && invalidFormatError $i || :
                 flg_force=''
                 flg_on_read=1
             elif [ "$flg_force" = 2 ]; then
-                [ "$char" != ',' ] && invalidFormatError || :
+                [ "$char" != ',' ] && invalidFormatError $i || :
                 flg_force=''
                 flg_state=1
             fi
@@ -513,8 +523,10 @@ function processAarray(){
             fi
         elif [ "$flg_on_read" = 1 ]; then
             replaceIdx
+            [ -z "$flg_continue" ] && flg_on_read='' || :
         elif [ "$flg_on_read" = 2 ]; then
             replaceIdx 1
+            [ -z "$flg_continue" ] && flg_on_read='' || :
         elif [ "$flg_on_read" = 3 ]; then
             flg_continue=''
             restoreObjValue
@@ -529,26 +541,15 @@ function processAarray(){
     done
 }
 
-function setIndexedValue(){
-    idx+=$char
-    if [[ "${json_value:$i:1}" =~ ^[0-9]$ ]]; then
-        flg_continue=1
-        return 0
-    fi
-    [ -n "$1" ] && indexed_value=${num_shelf[$idx]} || indexed_value="${str_shelf[$idx]}"
-    idx=''
-    flg_continue=''
-}
-
 function r4process(){
 
     json_value=${1:1:((${#1}-2))}
     layer=$2
-    
-    if [ "${json_value:0:1}" = '{' ]; then
-        [ "${json_value: -1}" != '}' ] && invalidFormatError || :
-    elif [ "${json_value:0:1}" = '[' ]; then
-        [ "${json_value: -1}" = ']' ] && flg_array=1 || invalidFormatError
+
+    if [ "${1:0:1}" = '{' ]; then
+        [ "${1: -1}" != '}' ] && invalidFormatError || :
+    elif [ "${1:0:1}" = '[' ]; then
+        [ "${1: -1}" = ']' ] && flg_array=1 || invalidFormatError
     fi
     [ -z "$json_value" ] && return 0 || :
     if [ -n "$flg_array" ]; then
@@ -561,8 +562,8 @@ function r4process(){
     flg_on_read='' # 1-str/2-num/3-obj/4-array
     flg_target=0 # 1-this is the target./2-including the target as children./3-both.
     marked_idx=0
-    key=''
-    depth_counter=''
+    key=''; depth_counter='';
+    flag_on_restore='' # 1-str/2-num
 
     for i in `seq 1 ${#json_value}`; do
         char=${json_value:(($i-1)):1}
@@ -585,14 +586,14 @@ function r4process(){
             flg_state=3
             if [ "$char" = '"' ]; then
                 flg_on_read=1
-            elif [[ "$char" =~ ^[-0-9]$ ]]; then
+            elif [[ "$char" =~ ^[0-9]$ ]]; then
                 setIndexedValue 1
                 if [ -n "$flg_continue" ]; then
                     flg_on_read=2
                     continue
                 fi
                 next
-                record "$indexed_value"
+                record "$indexed_value" 2
             elif [ "$char" = '{' ]; then
                 flg_on_read=3
                 depth_counter='{'
@@ -603,13 +604,13 @@ function r4process(){
                 obj_value='['
             elif [ "$char" = 't' ]; then
                 next 
-                record true
+                record true 1
             elif [ "$char" = 'f' ]; then
                 next 
-                record false
+                record false 1
             elif [ "$char" = 'n' ]; then
                 next 
-                record null
+                record null 1
             else
                 invalidFormatError
             fi

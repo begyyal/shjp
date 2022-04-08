@@ -9,7 +9,6 @@ This has only minumum functions, but you can just copy [./shjp](./shjp) and use 
 
 - MIT Lisense, description is in source file.
 - Compliant to Bash.
-- Handling errors isn't strict because shjp scoped to extract value.
 
 ## Functions
 
