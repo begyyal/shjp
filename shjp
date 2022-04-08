@@ -304,7 +304,8 @@ function preProcess(){
             
             if [ -z "$depth_counter" ]; then
                 if [[ -z $depth_counter_bf && ! "$char" =~ ^[0-9]+$ ]]; then
-                    echo "The inputs contain invalid value as below." >&2
+                    echo "The input's file path isn't exist, and contains invalid value as json, as below." >&2
+                    echo "input as json ---> $json_value" >&2
                     echo "char at $i ---> $pre_processed_jv_tmp" >&2
                     end 1
                 elif [ -z "$pre_processed_jv" ]; then
@@ -621,7 +622,7 @@ function r4process(){
                 [ "$layer" = 'root' ] && key=$str_value || key=${layer}.${str_value}
                 [ -z "$flg_direct" ] && continue || :
     
-                for target in ${targets[@]}; do
+                for target in "${targets[@]}"; do
                     if [ "$target" = "$key" ]; then
                         flg_target=$(($flg_target|1))
                     elif [[ "$target" =~ ^("$key").+$ ]]; then
