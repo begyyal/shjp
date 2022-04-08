@@ -9,6 +9,8 @@ This has only minumum functions, but you can just copy [./shjp](./shjp) and use 
 
 - MIT Lisense, description is in source file.
 - Compliant to Bash.
+- Not following BMP(Basic Multilingual Plane) as a value representation,  
+  treat it as a string as it is.
 
 ## Functions
 

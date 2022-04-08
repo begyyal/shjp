@@ -15,6 +15,9 @@
   "false": false,
   "null": null,
   "empty": [],
+  "obj1": {
+    "a a": "spa ce"
+  },
   "operations": {
     "name": "test1",
     "command": "java -jar hello.jar",

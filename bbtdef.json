@@ -168,6 +168,17 @@
 					"value": "comma"
 				}
 			]
+		},
+		{
+			"name": "12_key_includes_space",
+			"command": "./shjp ./test.json -t 'obj1.a a'",
+			"exitCode": 0,
+			"expected": [
+				{
+					"act": "console-output",
+					"value": "spa ce"
+				}
+			]
 		}
 	]
 }
